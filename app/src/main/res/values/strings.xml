@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">Etat Des Lieux</string>
+    <string name="logo">logo</string>
+    <string name="creer_salle">Créer une pièce</string>
+    <string name="val_logo">val Logo</string>
+    <string name="textview">État Des Lieux</string>
+    <string name="enter_todo_title">Entrez le nom de la pièce</string>
+    <string name="com1test">Test</string>
+    <string name="nom_piece">Nom de la pièce</string>
+    <string name="description">Description</string>
+    <string name="taille_m">Taille (m²)</string>
+    <string name="etage">Étage</string>
+    <string name="create">Créer une pièce</string>
+    <string name="ouvrir">Ouvrir</string>
+    <string name="Createur">Créateur\n</string>
+    <string name="prendre_une_photo">Prendre une photo</string>
+    <string name="photo">Photo</string>
+    <string name="salle_size">Taille: %1$.2f m²</string>
+    <string name="salle_floor">Étage: %1$d</string>
+    <string name="salle_creator">Créateur: %1$s</string>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="buttonAddPiece" type="id"/>
+    <item name="buttonDeletePiece" type="id"/>
+    <item name="buttonOpenPiece" type="id"/>
+    <item name="recyclerViewPieces" type="id"/>
+</resources>
