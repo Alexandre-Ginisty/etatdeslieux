@@ -71,6 +71,21 @@
             android:hint="@string/etage"
             android:inputType="number" />
 
+        <EditText
+            android:id="@+id/editTextPieceCreator"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/salle_creator"
+            android:inputType="text" />
+
+        <!-- Spinner for selecting entry or exit state -->
+        <Spinner
+            android:id="@+id/spinnerEtatDesLieux"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:entries="@array/etat_des_lieux_options"
+            android:layout_marginTop="8dp" />
+
         <Button
             android:id="@+id/creerPieceButton"
             android:layout_width="match_parent"

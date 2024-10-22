@@ -23,7 +23,8 @@ class SalleAdapter(
 
     override fun onBindViewHolder(holder: SalleViewHolder, position: Int) {
         val piece = pieces[position]
-        holder.salleButton.text = piece.name  // Mettre le nom de la pièce sur le bouton
+        // Mettre le nom de la pièce, le type et le numéro sur le bouton
+        holder.salleButton.text = "${piece.name} - ${piece.typeEtatDesLieux} #${piece.etatDesLieuxNumber}"
         holder.salleButton.setOnClickListener { clickListener(piece) }
         holder.salleButton.setOnLongClickListener {
             longClickListener(piece, holder.salleButton)

@@ -12,10 +12,18 @@
     <string name="etage">Étage</string>
     <string name="create">Créer une pièce</string>
     <string name="ouvrir">Ouvrir</string>
-    <string name="Createur">Créateur\n</string>
+    <string name="Createur">Créateur
+</string>
     <string name="prendre_une_photo">Prendre une photo</string>
     <string name="photo">Photo</string>
     <string name="salle_size">Taille: %1$.2f m²</string>
     <string name="salle_floor">Étage: %1$d</string>
-    <string name="salle_creator">Créateur: %1$s</string>
+    <string name="salle_creator">Créateur</string>
+    <string name="photo_montrée">Photo</string>
+
+    <!-- Ajouter les options pour le Spinner -->
+    <string-array name="etat_des_lieux_options">
+        <item>Entrée</item>
+        <item>Sortie</item>
+    </string-array>
 </resources>
