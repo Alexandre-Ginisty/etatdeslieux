@@ -3,7 +3,7 @@
     <string name="logo">logo</string>
     <string name="creer_salle">Créer une pièce</string>
     <string name="val_logo">val Logo</string>
-    <string name="textview">État Des Lieux</string>
+    <string name="title">État Des Lieux</string>
     <string name="enter_todo_title">Entrez le nom de la pièce</string>
     <string name="com1test">Test</string>
     <string name="nom_piece">Nom de la pièce</string>

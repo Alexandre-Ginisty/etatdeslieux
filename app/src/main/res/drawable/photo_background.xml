@@ -1,0 +1,24 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Fond de l'image -->
+    <solid android:color="@android:color/white" />
+
+    <!-- Coins arrondis -->
+    <corners android:radius="12dp" />
+
+    <!-- Bordure fine et élégante -->
+    <stroke
+        android:width="2dp"
+        android:color="@color/borderGray" />
+
+    <!-- Espacement intérieur -->
+    <padding
+        android:left="8dp"
+        android:top="8dp"
+        android:right="8dp"
+        android:bottom="8dp" />
+
+    <!-- Ombre subtile (API 21 et plus) -->
+    <shadow
+        android:radius="4dp"
+        android:color="@android:color/darker_gray" />
+</shape>

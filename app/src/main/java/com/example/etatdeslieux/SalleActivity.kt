@@ -1,22 +1,29 @@
 package com.example.etatdeslieux
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
-import java.io.FileOutputStream
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class SalleActivity : AppCompatActivity() {
 
-    private lateinit var imageView: ImageView
-    private lateinit var takePhotoButton: Button
     private lateinit var salleTitle: TextView
     private lateinit var salleDescription: TextView
     private lateinit var salleSize: TextView
@@ -24,16 +31,17 @@ class SalleActivity : AppCompatActivity() {
     private lateinit var salleCreator: TextView
     private lateinit var salleEtatType: TextView
     private lateinit var salleEtatNumber: TextView
+    private lateinit var photoContainer: LinearLayout
+    private lateinit var takePhotoButton: Button
+
+    private var currentPhotoPath: String? = null
     private val REQUEST_IMAGE_CAPTURE = 1
-    private var currentPieceImagePath: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_salle)
 
-        // Lier les vues du XML
-        imageView = findViewById(R.id.imageView)
-        takePhotoButton = findViewById(R.id.takePhotoButton)
+        // Bind UI components
         salleTitle = findViewById(R.id.salleTitle)
         salleDescription = findViewById(R.id.salleDescription)
         salleSize = findViewById(R.id.salleSize)
@@ -41,84 +49,210 @@ class SalleActivity : AppCompatActivity() {
         salleCreator = findViewById(R.id.salleCreator)
         salleEtatType = findViewById(R.id.salleEtatType)
         salleEtatNumber = findViewById(R.id.salleEtatNumber)
+        photoContainer = findViewById(R.id.photoContainer)
+        takePhotoButton = findViewById(R.id.takePhotoButton)
 
-        // Charger les détails de la salle à partir de l'intent
-        val name = intent.getStringExtra("PIECE_NAME")
-        val description = intent.getStringExtra("PIECE_DESCRIPTION")
+        // Load room details from intent
+        val name = intent.getStringExtra("PIECE_NAME") ?: "Titre non défini"
+        val description = intent.getStringExtra("PIECE_DESCRIPTION") ?: "Description non définie"
         val size = intent.getFloatExtra("PIECE_SIZE", 0f)
         val floor = intent.getIntExtra("PIECE_FLOOR", 0)
-        val creator = intent.getStringExtra("PIECE_CREATOR")
-        val etatType = intent.getStringExtra("PIECE_ETAT_TYPE")
+        val creator = intent.getStringExtra("PIECE_CREATOR") ?: "Créateur inconnu"
+        val etatType = intent.getStringExtra("PIECE_ETAT_TYPE") ?: "Type non défini"
         val etatNumber = intent.getIntExtra("PIECE_ETAT_NUMBER", 0)
-        currentPieceImagePath = intent.getStringExtra("PIECE_IMAGE_PATH")
 
-        // Mettre à jour l'interface utilisateur avec les informations de la salle
+        // Populate UI
         salleTitle.text = name
         salleDescription.text = description
-        salleSize.text = "Taille: $size m²"
-        salleFloor.text = "Étage: $floor"
-        salleCreator.text = "Créateur: $creator"
-        salleEtatType.text = "Type d'état des lieux: $etatType"
-        salleEtatNumber.text = "Numéro d'état des lieux: $etatNumber"
+        salleSize.text = "Taille : $size m²"
+        salleFloor.text = "Étage : $floor"
+        salleCreator.text = "Créateur : $creator"
+        salleEtatType.text = "Type d'état des lieux : $etatType"
+        salleEtatNumber.text = "Numéro d'état des lieux : $etatNumber"
 
-        // Charger l'image si un chemin est disponible
-        if (currentPieceImagePath != null) {
-            val imageFile = File(currentPieceImagePath!!)
-            if (imageFile.exists()) {
-                val imageUri = Uri.fromFile(imageFile)
-                imageView.setImageURI(imageUri)
+        // Set up button for adding photos
+        takePhotoButton.setOnClickListener { dispatchTakePictureIntent() }
+
+        // Display saved photos
+        displaySavedImages()
+    }
+
+    private fun dispatchTakePictureIntent() {
+        val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        if (takePictureIntent.resolveActivity(packageManager) != null) {
+            val photoFile: File? = try {
+                createImageFile()
+            } catch (ex: IOException) {
+                ex.printStackTrace()
+                null
             }
-        }
 
-        // Bouton pour prendre une photo
-        takePhotoButton.setOnClickListener {
-            val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            if (takePictureIntent.resolveActivity(packageManager) != null) {
+            photoFile?.also {
+                val photoURI: Uri = FileProvider.getUriForFile(
+                    this,
+                    "${applicationContext.packageName}.fileprovider",
+                    it
+                )
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
                 startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
             }
+        }
+    }
+
+    @Throws(IOException::class)
+    private fun createImageFile(): File {
+        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir).apply {
+            currentPhotoPath = absolutePath
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            val imageBitmap = data?.extras?.get("data") as Bitmap
+            currentPhotoPath?.let { path ->
+                saveImageDetails(path, "")
+                displaySavedImages() // Refresh UI without duplicating
+            } ?: Toast.makeText(this, "Erreur lors de la capture de la photo.", Toast.LENGTH_SHORT).show()
+        }
+    }
 
-            // Sauvegarder l'image sur le stockage local
-            val imageFileName = "IMG_${System.currentTimeMillis()}.jpg"
-            val storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-            val imageFile = File(storageDir, imageFileName)
+    private fun saveImageDetails(imagePath: String, description: String) {
+        val storageDir = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+        val file = File(storageDir, "image_details.json")
 
-            try {
-                val outputStream = FileOutputStream(imageFile)
-                imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                outputStream.flush()
-                outputStream.close()
+        val json = if (file.exists()) file.readText() else "{}"
+        val jsonObject = JSONObject(json)
 
-                // Mettre à jour l'image de la salle actuelle
-                imageView.setImageBitmap(imageBitmap)
-                currentPieceImagePath = imageFile.absolutePath
+        val photos = jsonObject.optJSONArray("photos") ?: JSONArray()
 
-                // Enregistrer le chemin de l'image dans les données de la pièce (via SharedPreferences ou base de données)
-                saveImagePathForCurrentPiece(currentPieceImagePath!!)
+        val existingPhoto = (0 until photos.length()).map { photos.getJSONObject(it) }
+            .firstOrNull { it.getString("path") == imagePath }
 
-            } catch (e: Exception) {
-                e.printStackTrace()
+        if (existingPhoto != null) {
+            existingPhoto.put("description", description)
+        } else {
+            val newPhoto = JSONObject().apply {
+                put("path", imagePath)
+                put("description", description)
+                put("room", salleTitle.text.toString()) // Associate photo with room
+            }
+            photos.put(newPhoto)
+        }
+
+        jsonObject.put("photos", photos)
+        file.writeText(jsonObject.toString())
+    }
+
+    private fun loadImageDetails(): JSONArray {
+        val storageDir = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+        val file = File(storageDir, "image_details.json")
+        return if (file.exists()) {
+            val json = file.readText()
+            val jsonObject = JSONObject(json)
+            jsonObject.optJSONArray("photos") ?: JSONArray()
+        } else {
+            JSONArray()
+        }
+    }
+
+    private fun displaySavedImages() {
+        photoContainer.removeAllViews()
+        val photos = loadImageDetails()
+        for (i in 0 until photos.length()) {
+            val photo = photos.getJSONObject(i)
+            val path = photo.getString("path")
+            val description = photo.getString("description")
+            if (photo.optString("room") == salleTitle.text.toString()) {
+                addPhotoToContainer(path, description)
             }
         }
     }
 
-    private fun saveImagePathForCurrentPiece(imagePath: String) {
-        // Sauvegarder le chemin de l'image pour la pièce actuelle
-        val sharedPreferences = getSharedPreferences("pieces", MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
-        val pieceId = intent.getIntExtra("PIECE_ID", -1)
-        editor.putString("PIECE_IMAGE_PATH_$pieceId", imagePath)
-        editor.apply()
+    private fun deletePhoto(imagePath: String) {
+        val storageDir = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+        val file = File(storageDir, "image_details.json")
 
-        // Recharger l'activité avec les informations mises à jour pour garantir la persistance de l'image
-        intent.putExtra("PIECE_IMAGE_PATH", imagePath)
-        finish()
-        startActivity(intent)
+        if (file.exists()) {
+            val json = file.readText()
+            val jsonObject = JSONObject(json)
+            val photos = jsonObject.optJSONArray("photos") ?: JSONArray()
+
+            val filteredPhotos = JSONArray()
+            for (i in 0 until photos.length()) {
+                val photo = photos.getJSONObject(i)
+                if (photo.getString("path") != imagePath) {
+                    filteredPhotos.put(photo)
+                }
+            }
+
+            jsonObject.put("photos", filteredPhotos)
+            file.writeText(jsonObject.toString())
+        }
+
+        val imageFile = File(imagePath)
+        if (imageFile.exists()) {
+            imageFile.delete()
+        }
+
+        displaySavedImages()
+    }
+
+    private fun addPhotoToContainer(imagePath: String, description: String) {
+        val photoLayout = layoutInflater.inflate(R.layout.photo_item, photoContainer, false) as LinearLayout
+
+        val imageView = photoLayout.findViewById<ImageView>(R.id.photoImage)
+        val viewDescriptionButton = photoLayout.findViewById<Button>(R.id.viewDescriptionButton)
+        val editDescriptionButton = photoLayout.findViewById<Button>(R.id.editDescriptionButton)
+        val deletePhotoButton = photoLayout.findViewById<Button>(R.id.deletePhotoButton) // New delete button
+
+        val imageFile = File(imagePath)
+        if (imageFile.exists()) {
+            val imageUri = Uri.fromFile(imageFile)
+            imageView.setImageURI(imageUri)
+        }
+
+        viewDescriptionButton.setOnClickListener {
+            AlertDialog.Builder(this, R.style.CustomAlertDialog)
+                .setTitle("Description de la photo")
+                .setMessage(description.ifEmpty { "Pas de description disponible." })
+                .setPositiveButton("Fermer", null)
+                .show()
+        }
+
+        editDescriptionButton.setOnClickListener {
+            val input = EditText(this).apply {
+                setText(description)
+            }
+
+            AlertDialog.Builder(this, R.style.CustomAlertDialog)
+                .setTitle("Modifier la description")
+                .setView(input)
+                .setPositiveButton("Enregistrer") { dialog, _ ->
+                    val newDescription = input.text.toString()
+                    saveImageDetails(imagePath, newDescription)
+                    displaySavedImages() // Refresh UI
+                }
+                .setNegativeButton("Annuler") { dialog, _ -> dialog.dismiss() }
+                .show()
+        }
+
+        deletePhotoButton.setOnClickListener {
+            AlertDialog.Builder(this, R.style.CustomAlertDialog)
+                .setTitle("Supprimer la photo")
+                .setMessage("Voulez-vous vraiment supprimer cette photo ?")
+                .setPositiveButton("Supprimer") { _, _ ->
+                    deletePhoto(imagePath)
+                }
+                .setNegativeButton("Annuler", null)
+                .show()
+        }
+        imageView.setOnClickListener {
+            val fullScreenIntent = Intent(this, FullScreenImageActivity::class.java)
+            fullScreenIntent.putExtra("imagePath", imagePath)
+            startActivity(fullScreenIntent)
+        }
+        photoContainer.addView(photoLayout)
     }
 }

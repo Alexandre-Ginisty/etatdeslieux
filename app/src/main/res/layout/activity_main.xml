@@ -5,95 +5,120 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/main"
+    android:background="@color/lightGray"
+    android:padding="16dp"
     tools:context=".MainActivity">
 
-    <!-- Logo Image -->
-    <ImageView
-        android:id="@+id/logo"
-        android:layout_width="330dp"
-        android:layout_height="103dp"
-        android:layout_marginTop="48dp"
-        android:contentDescription="@string/val_logo"
-        android:src="@drawable/logo"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <!-- Title TextView -->
+    <!-- Titre de l'application -->
     <TextView
         android:id="@+id/textView"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/textview"
-        android:textSize="40sp"
-        app:layout_constraintTop_toBottomOf="@+id/logo"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:text="@string/title"
+        android:textColor="@color/blue"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:shadowColor="@color/darkGray"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="6"
+        android:padding="16dp"
+        android:background="@drawable/title_background"
+        android:elevation="6dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Input Container -->
+
+    <!-- Conteneur des champs de saisie -->
     <LinearLayout
         android:id="@+id/inputContainer"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/rounded_background"
         android:orientation="vertical"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView"
         android:padding="16dp"
-        app:layout_constraintWidth_percent="0.8">
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView"
+        app:layout_constraintWidth_percent="0.85">
 
+        <!-- Champ : Nom de la pièce -->
         <EditText
             android:id="@+id/editTextPieceName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/edittext_background"
             android:hint="@string/nom_piece"
-            android:inputType="text" />
+            android:inputType="text"
+            android:padding="12dp" />
 
+        <!-- Champ : Description de la pièce -->
         <EditText
             android:id="@+id/editTextPieceDescription"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/edittext_background"
             android:hint="@string/description"
-            android:inputType="text" />
+            android:inputType="text"
+            android:padding="12dp" />
 
+        <!-- Champ : Taille de la pièce -->
         <EditText
             android:id="@+id/editTextPieceSize"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/edittext_background"
             android:hint="@string/taille_m"
-            android:inputType="numberDecimal" />
+            android:inputType="numberDecimal"
+            android:padding="12dp" />
 
+        <!-- Champ : Étage de la pièce -->
         <EditText
             android:id="@+id/editTextPieceFloor"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/edittext_background"
             android:hint="@string/etage"
-            android:inputType="number" />
+            android:inputType="number"
+            android:padding="12dp" />
 
+        <!-- Champ : Créateur de la pièce -->
         <EditText
             android:id="@+id/editTextPieceCreator"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/edittext_background"
             android:hint="@string/salle_creator"
-            android:inputType="text" />
+            android:inputType="text"
+            android:padding="12dp" />
 
-        <!-- Spinner for selecting entry or exit state -->
+        <!-- Spinner : Type d'état des lieux -->
         <Spinner
             android:id="@+id/spinnerEtatDesLieux"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/spinner_background"
             android:entries="@array/etat_des_lieux_options"
-            android:layout_marginTop="8dp" />
+            android:padding="12dp" />
 
+        <!-- Bouton : Créer la pièce -->
         <Button
             android:id="@+id/creerPieceButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/create" />
+            android:layout_marginTop="12dp"
+            android:backgroundTint="@color/blue"
+            android:padding="12dp"
+            android:text="@string/create"
+            android:textColor="@android:color/white"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- RecyclerView -->
+    <!-- Liste des pièces -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="0dp"
@@ -103,7 +128,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Overlay Layout for Action Buttons -->
+    <!-- Superposition pour les boutons d'action -->
     <FrameLayout
         android:id="@+id/overlayLayout"
         android:layout_width="match_parent"
@@ -117,24 +142,31 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_gravity="center"
-            android:background="@android:color/white"
+            android:background="@drawable/rounded_background"
             android:padding="16dp">
 
+            <!-- Bouton : Supprimer -->
             <Button
                 android:id="@+id/deleteButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Supprimer"
                 android:backgroundTint="@color/red"
-                android:textColor="@color/white" />
+                android:textColor="@android:color/white"
+                android:padding="12dp"
+                android:text="Supprimer"
+                android:textStyle="bold" />
 
+            <!-- Bouton : Ouvrir -->
             <Button
                 android:id="@+id/openButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/ouvrir"
+                android:layout_marginTop="8dp"
                 android:backgroundTint="@color/blue"
-                android:textColor="@color/white" />
+                android:textColor="@android:color/white"
+                android:padding="12dp"
+                android:text="@string/ouvrir"
+                android:textStyle="bold" />
         </LinearLayout>
     </FrameLayout>
 

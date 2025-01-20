@@ -1,199 +1,175 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
+    android:background="@color/lightGray"
     tools:context=".SalleActivity">
 
-    <!-- Container for Title -->
     <LinearLayout
-        android:id="@+id/titleContainer"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp"
-        android:background="@drawable/container_background"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp">
+        android:padding="16dp">
 
+        <!-- Titre de la salle -->
         <TextView
             android:id="@+id/salleTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
             android:textColor="@color/blue"
             android:textSize="24sp"
             android:textStyle="bold"
-            tools:text="Piece Title" />
-    </LinearLayout>
+            android:gravity="center"
+            android:shadowColor="@color/darkGray"
+            android:shadowDx="2"
+            android:shadowDy="2"
+            android:shadowRadius="4"
+            android:paddingBottom="12dp"
+            tools:text="Titre de la Salle" />
 
-    <!-- Container for Description -->
-    <LinearLayout
-        android:id="@+id/descriptionContainer"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="@drawable/container_background"
-        app:layout_constraintTop_toBottomOf="@id/titleContainer"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp">
+        <!-- Description de la salle -->
 
-        <TextView
-            android:id="@+id/salleDescription"
+        <!-- Informations sur la salle -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textColor="@color/black"
-            android:textSize="18sp"
-            tools:text="Description of the piece" />
-    </LinearLayout>
+            android:orientation="vertical"
+            android:background="@drawable/container_background"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp">
+            <TextView
+                android:id="@+id/salleDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:paddingBottom="12dp"
+                tools:text="Description de la salle :" />
 
-    <!-- Container for Size -->
-    <LinearLayout
-        android:id="@+id/sizeContainer"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="@drawable/container_background"
-        app:layout_constraintTop_toBottomOf="@id/descriptionContainer"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp">
+            <TextView
+                android:id="@+id/salleSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/black"
+                android:textSize="14sp"
+                tools:text="Taille : 25 m²" />
 
-        <TextView
-            android:id="@+id/salleSize"
+            <TextView
+                android:id="@+id/salleFloor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/black"
+                android:textSize="14sp"
+                tools:text="Étage : 3" />
+
+            <TextView
+                android:id="@+id/salleCreator"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/black"
+                android:textSize="14sp"
+                tools:text="Créateur : John Doe" />
+
+            <TextView
+                android:id="@+id/salleEtatType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/black"
+                android:textSize="14sp"
+                tools:text="Type d'état des lieux : Entrée" />
+
+            <TextView
+                android:id="@+id/salleEtatNumber"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/black"
+                android:textSize="14sp"
+                tools:text="Numéro d'état des lieux : 1" />
+        </LinearLayout>
+
+        <!-- Conteneur pour les photos -->
+        <LinearLayout
+            android:id="@+id/photoContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textColor="@color/black"
-            android:textSize="18sp"
-            tools:text="Size: 25 m²" />
-    </LinearLayout>
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp">
 
-    <!-- Container for Floor -->
-    <LinearLayout
-        android:id="@+id/floorContainer"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="@drawable/container_background"
-        app:layout_constraintTop_toBottomOf="@id/sizeContainer"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp">
+            <!-- Exemple de photo dynamique avec description et boutons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="8dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/container_background">
 
-        <TextView
-            android:id="@+id/salleFloor"
+                <!-- Image de la photo -->
+                <ImageView
+                    android:id="@+id/photoImage"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="Photo de la salle"
+                    android:layout_marginBottom="8dp"
+                    android:background="@drawable/rounded_image"
+                    android:clipToOutline="true" /> <!-- Permet de limiter l'image aux coins arrondis -->
+
+
+                <!-- Description et boutons -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+
+                    <Button
+                        android:id="@+id/viewDescriptionButton"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="@color/blue"
+                        android:textColor="@android:color/white"
+                        android:text="Voir"
+                        android:layout_marginEnd="4dp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/editDescriptionButton"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="@color/blue"
+                        android:textColor="@android:color/white"
+                        android:text="Modifier"
+                        android:layout_marginEnd="4dp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/deletePhotoButton"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="@color/red"
+                        android:textColor="@android:color/white"
+                        android:text="Supprimer"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Bouton d'ajout de photo -->
+        <Button
+            android:id="@+id/takePhotoButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textColor="@color/black"
-            android:textSize="18sp"
-            tools:text="Floor: 3" />
+            android:backgroundTint="@color/blue"
+            android:textColor="@android:color/white"
+            android:text="Ajouter une photo"
+            android:padding="12dp"
+            android:textStyle="bold" />
     </LinearLayout>
-
-    <!-- Container for Creator -->
-    <LinearLayout
-        android:id="@+id/creatorContainer"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="@drawable/container_background"
-        app:layout_constraintTop_toBottomOf="@id/floorContainer"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp">
-
-        <TextView
-            android:id="@+id/salleCreator"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textColor="@color/black"
-            android:textSize="18sp"
-            tools:text="Creator: John Doe" />
-    </LinearLayout>
-
-    <!-- Container for Etat Type -->
-    <LinearLayout
-        android:id="@+id/etatTypeContainer"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="@drawable/container_background"
-        app:layout_constraintTop_toBottomOf="@id/creatorContainer"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp">
-
-        <TextView
-            android:id="@+id/salleEtatType"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textColor="@color/black"
-            android:textSize="18sp"
-            tools:text="Type d'état des lieux: Entrée" />
-    </LinearLayout>
-
-    <!-- Container for Etat Number -->
-    <LinearLayout
-        android:id="@+id/etatNumberContainer"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="@drawable/container_background"
-        app:layout_constraintTop_toBottomOf="@id/etatTypeContainer"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp">
-
-        <TextView
-            android:id="@+id/salleEtatNumber"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textColor="@color/black"
-            android:textSize="18sp"
-            tools:text="Numéro d'état des lieux: 1" />
-    </LinearLayout>
-
-    <!-- ImageView for the photo -->
-    <Button
-        android:id="@+id/takePhotoButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Prendre une photo"
-        android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@+id/etatNumberContainer"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        />
-
-    <ImageView
-        android:id="@+id/imageView"
-        android:layout_width="0dp"
-        android:layout_height="200dp"
-        android:layout_marginTop="16dp"
-        android:contentDescription="Photo de la salle"
-        app:layout_constraintTop_toBottomOf="@+id/takePhotoButton"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintWidth_percent="0.8"
-        android:scaleType="centerCrop"
-        />
-
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

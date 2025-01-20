@@ -43,11 +43,17 @@ dependencies {
     implementation("com.google.android.material:material:1.9.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("com.google.code.gson:gson:2.10.1")
-    implementation("com.google.code.gson:gson:2.10.1")
     // Gson pour sérialisation JSON
 
     // RecyclerView pour la liste des pièces
     implementation("androidx.recyclerview:recyclerview:1.3.1")
+
+    // iTextPDF pour la génération des fichiers PDF
+    implementation("com.itextpdf:itextpdf:5.5.13.3")
+
+    // Glide pour le chargement d'images en plein écran
+    implementation("com.github.bumptech.glide:glide:4.14.2")
+    annotationProcessor("com.github.bumptech.glide:compiler:4.14.2")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

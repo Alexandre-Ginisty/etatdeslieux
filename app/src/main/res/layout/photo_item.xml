@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:layout_marginBottom="16dp"
+    android:background="@drawable/container_background">
+
+    <!-- Image de la photo -->
+    <ImageView
+        android:id="@+id/photoImage"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:scaleType="centerCrop"
+        android:contentDescription="Photo de la salle"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/photo_background" />
+
+    <!-- Description et boutons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="8dp">
+
+        <Button
+            android:id="@+id/viewDescriptionButton"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/buttonBlue"
+            android:textColor="@android:color/white"
+            android:text="Voir"
+            android:layout_marginEnd="4dp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/editDescriptionButton"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/buttonBlue"
+            android:textColor="@android:color/white"
+            android:text="Modifier"
+            android:layout_marginEnd="4dp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/deletePhotoButton"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/buttonRedPressed"
+            android:textColor="@android:color/white"
+            android:text="Supprimer"
+            android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

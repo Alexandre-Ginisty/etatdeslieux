@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Couleurs de base -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="blue">#000090</color>
     <color name="grey">#EDEDED</color>
     <color name="red">#E0000F</color>
 
+    <!-- Couleurs additionnelles pour un design moderne -->
+    <color name="lightGray">#F5F5F5</color> <!-- Fond clair -->
+    <color name="darkGray">#505050</color> <!-- Texte sombre pour les titres -->
+    <color name="buttonBlue">#1976D2</color> <!-- Bleu moderne pour les boutons -->
+    <color name="buttonBluePressed">#0D47A1</color> <!-- Bleu plus sombre au clic -->
+    <color name="buttonRedPressed">#B00020</color> <!-- Rouge plus sombre au clic -->
+    <color name="borderGray">#BDBDBD</color> <!-- Gris pour les bordures -->
+    <color name="textGray">#757575</color> <!-- Gris pour le texte -->
 
 </resources>
