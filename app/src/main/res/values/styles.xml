@@ -1,12 +1,13 @@
 <resources>
-    <!-- Style personnalisé pour les boutons d'AlertDialog -->
+    <!-- Styles pour les dialogues -->
     <style name="CustomAlertDialog" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <!-- Personnalisation des boutons dans l'AlertDialog -->
         <item name="buttonBarPositiveButtonStyle">@style/CustomDialogButton</item>
         <item name="buttonBarNegativeButtonStyle">@style/CustomDialogButton</item>
         <item name="buttonBarNeutralButtonStyle">@style/CustomDialogButton</item>
     </style>
 
-    <!-- Style pour les boutons -->
+    <!-- Styles pour les boutons des dialogues -->
     <style name="CustomDialogButton" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
         <item name="android:textColor">@color/blue</item>
         <item name="android:background">@drawable/dialog_button_background</item>
@@ -14,4 +15,7 @@
         <item name="android:paddingTop">8dp</item>
         <item name="android:paddingBottom">8dp</item>
     </style>
+
+    <!-- Thème principal de l'application -->
+
 </resources>

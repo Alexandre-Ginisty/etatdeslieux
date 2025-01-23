@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Etat Des Lieux</string>
+    <string name="app_name">État Des Lieux</string>
     <string name="logo">logo</string>
     <string name="creer_salle">Créer une pièce</string>
     <string name="val_logo">val Logo</string>
@@ -20,6 +20,11 @@
     <string name="salle_floor">Étage: %1$d</string>
     <string name="salle_creator">Créateur</string>
     <string name="photo_montrée">Photo</string>
+    <string name="supprimer">Supprimer</string>
+    <string name="modifier">Modifier</string>
+    <string name="voir">Voir</string>
+    <string name="deletesalle">Supprimer</string>
+    <string name="open">Ouvrir</string>
 
     <!-- Ajouter les options pour le Spinner -->
     <string-array name="etat_des_lieux_options">

@@ -9,10 +9,12 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
@@ -24,11 +26,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var salleAdapter: SalleAdapter
     private lateinit var overlayLayout: FrameLayout
     private lateinit var actionButtonsLayout: LinearLayout
-    private lateinit var deleteButton: Button
-    private lateinit var openButton: Button
+    private lateinit var deleteButton: ImageButton
+    private lateinit var openButton: ImageButton
     private var selectedPiece: Piece? = null
     private var selectedPieceButton: Button? = null
     private lateinit var spinnerEtatDesLieux: Spinner
+    private lateinit var itemTouchHelper: ItemTouchHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,12 +50,14 @@ class MainActivity : AppCompatActivity() {
 
         overlayLayout = findViewById(R.id.overlayLayout)
         actionButtonsLayout = findViewById(R.id.actionButtonsLayout)
-        deleteButton = findViewById(R.id.deleteButton)
-        openButton = findViewById(R.id.openButton)
+        deleteButton = findViewById<ImageButton>(R.id.deleteButton)
+        openButton = findViewById<ImageButton>(R.id.viewButton)
+
 
         // Charger les données sauvegardées
         loadPieces()
 
+        // Configuration de l'adaptateur pour la RecyclerView
         salleAdapter = SalleAdapter(pieces, { piece ->
             // Clic normal : ouvrir la pièce
             val intent = Intent(this, SalleActivity::class.java)
@@ -67,10 +72,50 @@ class MainActivity : AppCompatActivity() {
             selectedPiece = piece
             selectedPieceButton = button
             showActionButtons(button)
+        }, { viewHolder ->
+            // Début du drag-and-drop
+            itemTouchHelper.startDrag(viewHolder)
         })
 
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = salleAdapter
+
+        // Configuration de l'ItemTouchHelper pour gérer le drag-and-drop
+        val callback = object : ItemTouchHelper.Callback() {
+            override fun getMovementFlags(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder
+            ): Int {
+                val dragFlags = ItemTouchHelper.UP or ItemTouchHelper.DOWN
+                return makeMovementFlags(dragFlags, 0)
+            }
+
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                val fromPosition = viewHolder.adapterPosition
+                val toPosition = target.adapterPosition
+
+                // Réordonner les éléments dans la liste
+                val movedPiece = pieces.removeAt(fromPosition)
+                pieces.add(toPosition, movedPiece)
+
+                recyclerView.adapter?.notifyItemMoved(fromPosition, toPosition)
+
+                // Sauvegarder le nouvel ordre
+                savePieces()
+                return true
+            }
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                // Pas de gestion du swipe ici
+            }
+        }
+
+        itemTouchHelper = ItemTouchHelper(callback)
+        itemTouchHelper.attachToRecyclerView(recyclerView)
 
         // Configurer le Spinner pour forcer l'utilisateur à choisir une option
         val adapter = ArrayAdapter.createFromResource(

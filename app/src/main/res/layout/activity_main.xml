@@ -145,28 +145,27 @@
             android:background="@drawable/rounded_background"
             android:padding="16dp">
 
-            <!-- Bouton : Supprimer -->
-            <Button
+            <ImageButton
                 android:id="@+id/deleteButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:backgroundTint="@color/red"
-                android:textColor="@android:color/white"
-                android:padding="12dp"
-                android:text="Supprimer"
-                android:textStyle="bold" />
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:src="@drawable/ic_delete"
+                android:contentDescription="@string/deletesalle"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:scaleType="fitCenter"
+                android:padding="4dp"/>
 
-            <!-- Bouton : Ouvrir -->
-            <Button
-                android:id="@+id/openButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:backgroundTint="@color/blue"
-                android:textColor="@android:color/white"
-                android:padding="12dp"
-                android:text="@string/ouvrir"
-                android:textStyle="bold" />
+            <ImageButton
+                android:id="@+id/viewButton"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:src="@drawable/ic_view"
+                android:contentDescription="@string/open"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:scaleType="fitCenter"
+                android:padding="4dp"/>
+
+
         </LinearLayout>
     </FrameLayout>
 

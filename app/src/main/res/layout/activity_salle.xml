@@ -119,45 +119,112 @@
                     android:clipToOutline="true" /> <!-- Permet de limiter l'image aux coins arrondis -->
 
 
-                <!-- Description et boutons -->
                 <LinearLayout
+                    xmlns:android="http://schemas.android.com/apk/res/android"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:padding="8dp">
 
-                    <Button
+                    <!-- Bouton Voir -->
+                    <ImageButton
                         android:id="@+id/viewDescriptionButton"
-                        android:layout_width="0dp"
-                        android:layout_height="40dp"
-                        android:layout_weight="1"
-                        android:backgroundTint="@color/blue"
-                        android:textColor="@android:color/white"
-                        android:text="Voir"
-                        android:layout_marginEnd="4dp"
-                        android:textStyle="bold" />
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:background="@android:color/transparent"
+                        android:src="@drawable/ic_view"
+                        android:contentDescription="Voir la description"
+                        android:layout_marginEnd="16dp"
+                        android:scaleType="centerCrop"/>
 
-                    <Button
+
+                    <!-- Bouton Modifier -->
+                    <ImageButton
                         android:id="@+id/editDescriptionButton"
-                        android:layout_width="0dp"
-                        android:layout_height="40dp"
-                        android:layout_weight="1"
-                        android:backgroundTint="@color/blue"
-                        android:textColor="@android:color/white"
-                        android:text="Modifier"
-                        android:layout_marginEnd="4dp"
-                        android:textStyle="bold" />
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:background="@android:color/transparent"
+                        android:src="@drawable/ic_edit"
+                        android:contentDescription="Modifier la description"
+                        android:layout_marginEnd="16dp"
+                        android:scaleType="centerCrop"
 
-                    <Button
+                    />
+
+                    <!-- Bouton Supprimer -->
+                    <ImageButton
                         android:id="@+id/deletePhotoButton"
-                        android:layout_width="0dp"
-                        android:layout_height="40dp"
-                        android:layout_weight="1"
-                        android:backgroundTint="@color/red"
-                        android:textColor="@android:color/white"
-                        android:text="Supprimer"
-                        android:textStyle="bold" />
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:background="@android:color/transparent"
+                        android:src="@drawable/ic_delete"
+                        android:contentDescription="Supprimer la photo"
+                        android:scaleType="centerCrop"/>
                 </LinearLayout>
+
+
+
+                <!--                <LinearLayout-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:orientation="horizontal"-->
+<!--                    android:gravity="center"-->
+<!--                    android:padding="8dp">-->
+
+<!--                    &lt;!&ndash; Bouton Voir &ndash;&gt;-->
+<!--                    <com.google.android.material.button.MaterialButton-->
+<!--                        android:id="@+id/viewDescriptionButton"-->
+<!--                        android:layout_width="0dp"-->
+<!--                        android:layout_height="wrap_content"-->
+<!--                        android:layout_marginEnd="8dp"-->
+<!--                        android:layout_weight="1"-->
+<!--                        android:backgroundTint="@color/blue"-->
+<!--                        android:text="Voir"-->
+<!--                        android:textColor="@android:color/white"-->
+<!--                        android:textStyle="bold"-->
+<!--                        android:icon="@drawable/view"-->
+<!--                        android:iconPadding="8dp"-->
+<!--                        android:iconTint="@android:color/white"-->
+<!--                        android:padding="12dp"-->
+<!--                        android:textSize="14sp" />-->
+
+<!--                    &lt;!&ndash; Bouton Modifier &ndash;&gt;-->
+<!--                    <com.google.android.material.button.MaterialButton-->
+<!--                        android:id="@+id/editDescriptionButton"-->
+<!--                        android:layout_width="0dp"-->
+<!--                        android:layout_height="wrap_content"-->
+<!--                        android:layout_marginEnd="8dp"-->
+<!--                        android:layout_weight="1"-->
+<!--                        android:backgroundTint="@color/blue"-->
+<!--                        android:text="Modifier"-->
+<!--                        android:textColor="@android:color/white"-->
+<!--                        android:textStyle="bold"-->
+<!--                        android:icon="@drawable/edit"-->
+<!--                        android:iconPadding="8dp"-->
+<!--                        android:iconTint="@android:color/white"-->
+<!--                        android:padding="12dp"-->
+<!--                        android:textSize="14sp" />-->
+
+<!--                    &lt;!&ndash; Bouton Supprimer &ndash;&gt;-->
+<!--                    <com.google.android.material.button.MaterialButton-->
+<!--                        android:id="@+id/deletePhotoButton"-->
+<!--                        android:layout_width="0dp"-->
+<!--                        android:layout_height="wrap_content"-->
+<!--                        android:layout_weight="1"-->
+<!--                        android:backgroundTint="@color/red"-->
+<!--                        android:text="Supprimer"-->
+<!--                        android:textColor="@android:color/white"-->
+<!--                        android:textStyle="bold"-->
+<!--                        android:icon="@drawable/delete"-->
+<!--                        android:iconPadding="8dp"-->
+<!--                        android:iconTint="@android:color/white"-->
+<!--                        android:padding="12dp"-->
+<!--                        android:textSize="14sp" />-->
+<!--                </LinearLayout>-->
+
+
+
             </LinearLayout>
         </LinearLayout>
 

@@ -7,10 +7,13 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
@@ -19,8 +22,7 @@ import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 class SalleActivity : AppCompatActivity() {
 
@@ -35,7 +37,7 @@ class SalleActivity : AppCompatActivity() {
     private lateinit var takePhotoButton: Button
 
     private var currentPhotoPath: String? = null
-    private val REQUEST_IMAGE_CAPTURE = 1
+    private lateinit var takePhotoLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,6 +53,16 @@ class SalleActivity : AppCompatActivity() {
         salleEtatNumber = findViewById(R.id.salleEtatNumber)
         photoContainer = findViewById(R.id.photoContainer)
         takePhotoButton = findViewById(R.id.takePhotoButton)
+
+        // Initialize ActivityResultLauncher for photo capture
+        takePhotoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                currentPhotoPath?.let { path ->
+                    saveImageDetails(path, "")
+                    displaySavedImages() // Refresh the UI
+                } ?: Toast.makeText(this, "Erreur lors de la capture de la photo.", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         // Load room details from intent
         val name = intent.getStringExtra("PIECE_NAME") ?: "Titre non défini"
@@ -94,7 +106,7 @@ class SalleActivity : AppCompatActivity() {
                     it
                 )
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
-                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
+                takePhotoLauncher.launch(takePictureIntent)
             }
         }
     }
@@ -105,16 +117,6 @@ class SalleActivity : AppCompatActivity() {
         val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir).apply {
             currentPhotoPath = absolutePath
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            currentPhotoPath?.let { path ->
-                saveImageDetails(path, "")
-                displaySavedImages() // Refresh UI without duplicating
-            } ?: Toast.makeText(this, "Erreur lors de la capture de la photo.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -200,19 +202,23 @@ class SalleActivity : AppCompatActivity() {
     }
 
     private fun addPhotoToContainer(imagePath: String, description: String) {
+        // Inflate the photo item layout
         val photoLayout = layoutInflater.inflate(R.layout.photo_item, photoContainer, false) as LinearLayout
 
+        // Find views in the photo item
         val imageView = photoLayout.findViewById<ImageView>(R.id.photoImage)
-        val viewDescriptionButton = photoLayout.findViewById<Button>(R.id.viewDescriptionButton)
-        val editDescriptionButton = photoLayout.findViewById<Button>(R.id.editDescriptionButton)
-        val deletePhotoButton = photoLayout.findViewById<Button>(R.id.deletePhotoButton) // New delete button
+        val viewDescriptionButton = photoLayout.findViewById<ImageButton>(R.id.viewDescriptionButton)
+        val editDescriptionButton = photoLayout.findViewById<ImageButton>(R.id.editDescriptionButton)
+        val deletePhotoButton = photoLayout.findViewById<ImageButton>(R.id.deletePhotoButton)
 
+        // Load the image from the given path
         val imageFile = File(imagePath)
         if (imageFile.exists()) {
             val imageUri = Uri.fromFile(imageFile)
             imageView.setImageURI(imageUri)
         }
 
+        // Set onClickListener for the "View Description" button
         viewDescriptionButton.setOnClickListener {
             AlertDialog.Builder(this, R.style.CustomAlertDialog)
                 .setTitle("Description de la photo")
@@ -221,6 +227,7 @@ class SalleActivity : AppCompatActivity() {
                 .show()
         }
 
+        // Set onClickListener for the "Edit Description" button
         editDescriptionButton.setOnClickListener {
             val input = EditText(this).apply {
                 setText(description)
@@ -229,7 +236,7 @@ class SalleActivity : AppCompatActivity() {
             AlertDialog.Builder(this, R.style.CustomAlertDialog)
                 .setTitle("Modifier la description")
                 .setView(input)
-                .setPositiveButton("Enregistrer") { dialog, _ ->
+                .setPositiveButton("Enregistrer") { _, _ ->
                     val newDescription = input.text.toString()
                     saveImageDetails(imagePath, newDescription)
                     displaySavedImages() // Refresh UI
@@ -238,6 +245,7 @@ class SalleActivity : AppCompatActivity() {
                 .show()
         }
 
+        // Set onClickListener for the "Delete Photo" button
         deletePhotoButton.setOnClickListener {
             AlertDialog.Builder(this, R.style.CustomAlertDialog)
                 .setTitle("Supprimer la photo")
@@ -248,11 +256,15 @@ class SalleActivity : AppCompatActivity() {
                 .setNegativeButton("Annuler", null)
                 .show()
         }
+
+        // Set onClickListener for the image view to display it in full-screen
         imageView.setOnClickListener {
             val fullScreenIntent = Intent(this, FullScreenImageActivity::class.java)
             fullScreenIntent.putExtra("imagePath", imagePath)
             startActivity(fullScreenIntent)
         }
+
+        // Add the photo layout to the container
         photoContainer.addView(photoLayout)
     }
 }
