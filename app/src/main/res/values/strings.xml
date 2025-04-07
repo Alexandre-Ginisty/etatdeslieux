@@ -1,34 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">État Des Lieux</string>
-    <string name="logo">logo</string>
-    <string name="creer_salle">Créer une pièce</string>
-    <string name="val_logo">val Logo</string>
-    <string name="title">État Des Lieux</string>
-    <string name="enter_todo_title">Entrez le nom de la pièce</string>
-    <string name="com1test">Test</string>
-    <string name="nom_piece">Nom de la pièce</string>
-    <string name="description">Description</string>
-    <string name="taille_m">Taille (m²)</string>
-    <string name="etage">Étage</string>
-    <string name="create">Créer une pièce</string>
-    <string name="ouvrir">Ouvrir</string>
-    <string name="Createur">Créateur
-</string>
-    <string name="prendre_une_photo">Prendre une photo</string>
-    <string name="photo">Photo</string>
-    <string name="salle_size">Taille: %1$.2f m²</string>
-    <string name="salle_floor">Étage: %1$d</string>
-    <string name="salle_creator">Créateur</string>
-    <string name="photo_montrée">Photo</string>
-    <string name="supprimer">Supprimer</string>
-    <string name="modifier">Modifier</string>
-    <string name="voir">Voir</string>
-    <string name="deletesalle">Supprimer</string>
-    <string name="open">Ouvrir</string>
+    <string name="app_name">État des Lieux</string>
+    <string name="add_room">Ajouter une pièce</string>
+    <string name="room_name">Nom de la pièce</string>
+    <string name="room_description">Description</string>
+    <string name="room_size">Taille (m²)</string>
+    <string name="room_floor">Étage</string>
+    <string name="room_creator">Créateur</string>
+    <string name="room_type">Type d\'état des lieux</string>
+    <string name="save">Enregistrer</string>
+    <string name="error_required">Ce champ est requis</string>
+    <string name="error_invalid_size">La taille doit être un nombre positif</string>
+    <string name="error_invalid_floor">L\'étage doit être un nombre valide</string>
 
     <!-- Ajouter les options pour le Spinner -->
     <string-array name="etat_des_lieux_options">
         <item>Entrée</item>
         <item>Sortie</item>
+        <item>Pré-état des lieux</item>
+        <item>Intermédiaire</item>
     </string-array>
 </resources>
