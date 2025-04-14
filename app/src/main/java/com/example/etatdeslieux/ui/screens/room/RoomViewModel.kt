@@ -103,16 +103,26 @@ class RoomViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true)
-                val uri = currentPhotoUri ?: throw IllegalStateException("No photo URI available")
-                Log.d("RoomViewModel", "Handling photo capture: $uri")
+                val uri = currentPhotoUri
+                if (uri == null) {
+                    Log.e("RoomViewModel", "No photo URI available")
+                    _uiState.value = _uiState.value.copy(
+                        error = "Veuillez réessayer de prendre la photo",
+                        isLoading = false
+                    )
+                    return@launch
+                }
                 
+                Log.d("RoomViewModel", "Handling photo capture: $uri")
                 addPhoto(uri)
                 currentPhotoUri = null
+                _uiState.value = _uiState.value.copy(isLoading = false)
                 
             } catch (e: Exception) {
                 Log.e("RoomViewModel", "Photo capture failed", e)
                 _uiState.value = _uiState.value.copy(
-                    error = "Échec de capture photo: ${e.message}"
+                    error = "Échec de capture photo: ${e.message}",
+                    isLoading = false
                 )
             }
         }

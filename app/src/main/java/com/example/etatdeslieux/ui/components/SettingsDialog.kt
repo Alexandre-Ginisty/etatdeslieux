@@ -2,54 +2,68 @@ package com.example.etatdeslieux.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.etatdeslieux.ui.theme.AppTheme
+import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.etatdeslieux.ui.viewmodel.SettingsViewModel
 
 @Composable
 fun SettingsDialog(
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
-    var sliderPosition by remember { mutableStateOf(AppTheme.fontScale) }
+    val darkTheme by settingsViewModel.darkTheme.collectAsState(initial = false)
+    val fontScale by settingsViewModel.fontScale.collectAsState(initial = 1.0f)
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "Paramètres",
-                style = MaterialTheme.typography.headlineSmall
-            )
-        },
-        text = {
+    var tempFontScale by remember { mutableStateOf(fontScale) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = MaterialTheme.shapes.large
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Thème
+                Text(
+                    text = "Paramètres",
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                // Thème sombre
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Thème sombre")
+                    Text(
+                        text = "Thème sombre",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                     Switch(
-                        checked = AppTheme.isDarkTheme,
-                        onCheckedChange = { AppTheme.toggleTheme() }
+                        checked = darkTheme,
+                        onCheckedChange = { settingsViewModel.updateDarkTheme(it) }
                     )
                 }
 
-                // Taille de la police
-                Column {
-                    Text("Taille de la police")
+                // Taille de police
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Taille de police",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
                     Slider(
-                        value = sliderPosition,
-                        onValueChange = { sliderPosition = it },
+                        value = tempFontScale,
+                        onValueChange = { tempFontScale = it },
                         valueRange = 0.8f..1.5f,
                         steps = 6,
                         modifier = Modifier.padding(horizontal = 8.dp)
@@ -62,22 +76,27 @@ fun SettingsDialog(
                         Text("A", style = MaterialTheme.typography.headlineMedium)
                     }
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    AppTheme.updateFontScale(sliderPosition)
-                    onDismiss()
+
+                // Boutons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Annuler")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            settingsViewModel.updateFontScale(tempFontScale)
+                            onDismiss()
+                        }
+                    ) {
+                        Text("Appliquer")
+                    }
                 }
-            ) {
-                Text("Appliquer")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Annuler")
             }
         }
-    )
+    }
 }

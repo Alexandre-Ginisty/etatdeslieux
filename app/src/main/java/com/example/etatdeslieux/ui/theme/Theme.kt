@@ -2,81 +2,91 @@ package com.example.etatdeslieux.ui.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF000091),        // Bleu gouvernement
+private val LightColors = lightColorScheme(
+    primary = Color(0xFF1976D2),        // Bleu principal
     onPrimary = Color.White,
-    secondary = Color(0xFFE1000F),      // Rouge Marianne
+    primaryContainer = Color(0xFFE3F2FD),
+    onPrimaryContainer = Color(0xFF1976D2),
+    
+    secondary = Color(0xFF42A5F5),      // Bleu accent
     onSecondary = Color.White,
-    tertiary = Color(0xFF161616),       // Gris foncé
-    surface = Color.White.copy(alpha = 0.95f),
-    background = Color(0xFFF5F5F5),
-    surfaceVariant = Color(0xFFF5F5F5),
-    error = Color(0xFFE1000F)
+    secondaryContainer = Color(0xFFE3F2FD),
+    onSecondaryContainer = Color(0xFF1976D2),
+    
+    surface = Color.White,
+    onSurface = Color(0xFF212121),      // Noir
+    surfaceVariant = Color(0xFFF5F5F5), // Gris clair
+    onSurfaceVariant = Color(0xFF9E9E9E), // Gris
+    
+    error = Color(0xFFD32F2F),          // Rouge
+    onError = Color.White
 )
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF1B1B4B),        // Bleu gouvernement foncé
+private val DarkColors = darkColorScheme(
+    primary = Color(0xFF42A5F5),        // Bleu accent
     onPrimary = Color.White,
-    secondary = Color(0xFF8B0000),      // Rouge Marianne foncé
+    primaryContainer = Color(0xFF1976D2),
+    onPrimaryContainer = Color.White,
+    
+    secondary = Color(0xFF1976D2),      // Bleu principal
     onSecondary = Color.White,
-    tertiary = Color(0xFFE0E0E0),       // Gris clair
-    surface = Color(0xFF121212),
-    background = Color(0xFF000000),
-    surfaceVariant = Color(0xFF1E1E1E),
-    error = Color(0xFF8B0000)
+    secondaryContainer = Color(0xFF1565C0),
+    onSecondaryContainer = Color.White,
+    
+    surface = Color(0xFF212121),        // Noir
+    onSurface = Color.White,
+    surfaceVariant = Color(0xFF424242), // Gris foncé
+    onSurfaceVariant = Color(0xFF9E9E9E), // Gris
+    
+    error = Color(0xFFD32F2F),          // Rouge
+    onError = Color.White
 )
 
 object AppTheme {
-    private var _isDarkTheme by mutableStateOf(false)
-    private var _fontScale by mutableStateOf(1f)
-
-    val isDarkTheme: Boolean
-        get() = _isDarkTheme
-
-    val fontScale: Float
-        get() = _fontScale
+    var isDarkTheme by mutableStateOf(false)
+    var fontScale by mutableStateOf(1.0f)
 
     fun toggleTheme() {
-        _isDarkTheme = !_isDarkTheme
+        isDarkTheme = !isDarkTheme
     }
 
     fun updateFontScale(scale: Float) {
-        _fontScale = scale
+        fontScale = scale
     }
 }
 
 @Composable
 fun EtatDesLieuxTheme(
     darkTheme: Boolean = AppTheme.isDarkTheme,
+    fontScale: Float = AppTheme.fontScale,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val colorScheme = if (darkTheme) DarkColors else LightColors
     val view = LocalView.current
     
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
+            window.statusBarColor = colorScheme.surface.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
-    CompositionLocalProvider(
-        LocalTextStyle provides LocalTextStyle.current.copy(
-            fontSize = LocalTextStyle.current.fontSize * AppTheme.fontScale
-        )
-    ) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = Typography,
-            content = content
-        )
-    }
+    MaterialTheme(
+        colorScheme = colorScheme,
+        content = content
+    )
 }
