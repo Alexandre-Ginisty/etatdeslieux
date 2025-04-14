@@ -14,40 +14,20 @@ import com.example.etatdeslieux.model.Room
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun RoomPreviewItem(
-    room: Room,
-    onClick: () -> Unit,
-    onDelete: () -> Unit
+fun DeleteableItem(
+    onDelete: () -> Unit,
+    content: @Composable () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .combinedClickable(
-                onClick = onClick,
+    Box {
+        Box(
+            modifier = Modifier.combinedClickable(
+                onClick = { },
                 onLongClick = { showMenu = true }
             )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = room.name,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = "État des lieux ${room.etatType} n°${room.etatNumber}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
+            content()
         }
 
         DropdownMenu(

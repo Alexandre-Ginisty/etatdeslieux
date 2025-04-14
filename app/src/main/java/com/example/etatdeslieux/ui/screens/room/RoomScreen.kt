@@ -1,11 +1,11 @@
 package com.example.etatdeslieux.ui.screens.room
 
-import android.net.Uri
-import androidx.compose.foundation.clickable
+
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -21,13 +21,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.etatdeslieux.model.Photo
+import com.example.etatdeslieux.model.Room
+import com.example.etatdeslieux.ui.components.CameraPermission
+import com.example.etatdeslieux.ui.components.PhotoSection
 import com.example.etatdeslieux.ui.components.TopBar
+import com.example.etatdeslieux.utils.ComposeFileProvider
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
 fun RoomScreen(
-    roomId: Long,
     onNavigateBack: () -> Unit,
     onTakePhoto: () -> Unit,
     viewModel: RoomViewModel = hiltViewModel()
@@ -35,10 +41,25 @@ fun RoomScreen(
     val room by viewModel.room.collectAsState()
     val photos by viewModel.photos.collectAsState()
     val error by viewModel.error.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     var showErrorDialog by remember { mutableStateOf(false) }
     var showPhotoDialog by remember { mutableStateOf(false) }
     var selectedPhoto by remember { mutableStateOf<Photo?>(null) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    
+    data class DialogStates(
+        val showCameraPermission: Boolean = false,
+        val showEditDialog: Boolean = false
+    )
+    var dialogStates by remember { mutableStateOf(DialogStates()) }
+    val context = LocalContext.current
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            viewModel.handlePhotoCapture()
+        }
+    }
 
     LaunchedEffect(error) {
         if (error != null) {
@@ -62,192 +83,186 @@ fun RoomScreen(
             )
         }
     ) { padding ->
-        if (photos.isEmpty()) {
-            Box(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
+                    .padding(padding)
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            if (photos.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Aucune photo",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    Text(
-                        text = "Appuyez sur le bouton + pour ajouter une photo",
-                        style = MaterialTheme.typography.bodyMedium
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Aucune photo",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "Appuyez sur le bouton + pour ajouter une photo",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            } else {
+                PhotoSection(
+                    photos = photos,
+                    onAddPhotoClick = { 
+                        dialogStates = dialogStates.copy(showCameraPermission = true) 
+                    },
+                    onDeletePhoto = { photo -> 
+                        viewModel.deletePhoto(photo) 
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            }
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 150.dp),
-                contentPadding = padding,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(photos) { photo ->
-                    Card(
-                        modifier = Modifier
-                            .padding(4.dp)
-                            .aspectRatio(1f)
-                            .clickable {
-                                selectedPhoto = photo
-                                showPhotoDialog = true
-                            }
-                    ) {
-                        Box {
+            if (showPhotoDialog && selectedPhoto != null) {
+                var tempComment by remember { mutableStateOf(selectedPhoto!!.comment) }
+                
+                AlertDialog(
+                    onDismissRequest = {
+                        showPhotoDialog = false
+                        selectedPhoto = null
+                    },
+                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    title = { Text("Photo") },
+                    text = {
+                        Column {
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
-                                    .data(File(photo.uri))
+                                    .data(File(selectedPhoto!!.uri))
                                     .crossfade(true)
                                     .build(),
-                                contentDescription = photo.comment,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
+                                contentDescription = selectedPhoto!!.comment,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentScale = ContentScale.Fit
                             )
-                            if (photo.comment.isNotBlank()) {
-                                Surface(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .fillMaxWidth(),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
-                                ) {
-                                    Text(
-                                        text = photo.comment,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(4.dp)
-                                    )
+                            OutlinedTextField(
+                                value = tempComment,
+                                onValueChange = { tempComment = it },
+                                label = { Text("Commentaire") },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 16.dp)
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Row {
+                            TextButton(
+                                onClick = {
+                                    selectedPhoto?.let { photo ->
+                                        viewModel.updatePhoto(photo.copy(comment = tempComment))
+                                    }
+                                    showPhotoDialog = false
+                                    selectedPhoto = null
                                 }
+                            ) {
+                                Text("Enregistrer")
+                            }
+                            TextButton(
+                                onClick = {
+                                    showPhotoDialog = false
+                                    showDeleteConfirmation = true
+                                }
+                            ) {
+                                Text("Supprimer")
                             }
                         }
-                    }
-                }
-            }
-        }
-
-        // Photo Dialog
-        if (showPhotoDialog && selectedPhoto != null) {
-            var tempComment by remember { mutableStateOf(selectedPhoto!!.comment) }
-            
-            AlertDialog(
-                onDismissRequest = {
-                    showPhotoDialog = false
-                    selectedPhoto = null
-                },
-                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                title = { Text("Photo") },
-                text = {
-                    Column {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(File(selectedPhoto!!.uri))
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = selectedPhoto!!.comment,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentScale = ContentScale.Fit
-                        )
-                        OutlinedTextField(
-                            value = tempComment,
-                            onValueChange = { tempComment = it },
-                            label = { Text("Commentaire") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 16.dp)
-                        )
-                    }
-                },
-                confirmButton = {
-                    Row {
+                    },
+                    dismissButton = {
                         TextButton(
                             onClick = {
-                                selectedPhoto?.let { photo ->
-                                    viewModel.updatePhoto(photo.copy(comment = tempComment))
-                                }
                                 showPhotoDialog = false
                                 selectedPhoto = null
                             }
                         ) {
-                            Text("Enregistrer")
+                            Text("Annuler")
                         }
+                    }
+                )
+            }
+
+            if (showDeleteConfirmation && selectedPhoto != null) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteConfirmation = false },
+                    icon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                    title = { Text("Supprimer la photo") },
+                    text = { Text("Êtes-vous sûr de vouloir supprimer cette photo ?") },
+                    confirmButton = {
                         TextButton(
                             onClick = {
-                                showPhotoDialog = false
-                                showDeleteConfirmation = true
+                                selectedPhoto?.let { photo ->
+                                    viewModel.deletePhoto(photo)
+                                }
+                                showDeleteConfirmation = false
+                                selectedPhoto = null
                             }
                         ) {
                             Text("Supprimer")
                         }
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            showPhotoDialog = false
-                            selectedPhoto = null
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showDeleteConfirmation = false }
+                        ) {
+                            Text("Annuler")
                         }
-                    ) {
-                        Text("Annuler")
                     }
-                }
-            )
-        }
+                )
+            }
 
-        // Delete Confirmation Dialog
-        if (showDeleteConfirmation && selectedPhoto != null) {
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirmation = false },
-                icon = { Icon(Icons.Filled.Delete, contentDescription = null) },
-                title = { Text("Supprimer la photo") },
-                text = { Text("Êtes-vous sûr de vouloir supprimer cette photo ?") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            selectedPhoto?.let { photo ->
-                                viewModel.deletePhoto(photo)
-                            }
-                            showDeleteConfirmation = false
-                            selectedPhoto = null
+            if (showErrorDialog && error != null) {
+                AlertDialog(
+                    onDismissRequest = { showErrorDialog = false },
+                    icon = { Icon(Icons.Filled.Warning, contentDescription = null) },
+                    title = { Text("Erreur") },
+                    text = { Text(error!!) },
+                    confirmButton = {
+                        TextButton(onClick = { showErrorDialog = false }) {
+                            Text("OK")
                         }
-                    ) {
-                        Text("Supprimer")
                     }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { showDeleteConfirmation = false }
-                    ) {
-                        Text("Annuler")
-                    }
-                }
-            )
-        }
+                )
+            }
 
-        // Error Dialog
-        if (showErrorDialog && error != null) {
-            AlertDialog(
-                onDismissRequest = { showErrorDialog = false },
-                icon = { Icon(Icons.Filled.Warning, contentDescription = null) },
-                title = { Text("Erreur") },
-                text = { Text(error!!) },
-                confirmButton = {
-                    TextButton(onClick = { showErrorDialog = false }) {
-                        Text("OK")
+            if (dialogStates.showCameraPermission) {
+                CameraPermission(
+                    onPermissionGranted = {
+                        ComposeFileProvider.getImageUri(context).let { uri ->
+                            cameraLauncher.launch(uri)
+                        }
+                        dialogStates = dialogStates.copy(showCameraPermission = false)
+                    },
+                    onDismiss = {
+                        dialogStates = dialogStates.copy(showCameraPermission = false)
                     }
-                }
-            )
+                )
+            }
         }
     }
 }

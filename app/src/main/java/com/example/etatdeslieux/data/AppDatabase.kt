@@ -5,6 +5,9 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.example.etatdeslieux.data.dao.PhotoDao
+import com.example.etatdeslieux.data.dao.RoomDao
+import com.example.etatdeslieux.data.dao.RoomGroupDao
 import com.example.etatdeslieux.model.Photo
 import com.example.etatdeslieux.model.Room as ModelRoom
 import com.example.etatdeslieux.model.RoomGroup

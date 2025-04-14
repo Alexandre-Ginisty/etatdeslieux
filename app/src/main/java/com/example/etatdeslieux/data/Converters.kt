@@ -8,13 +8,13 @@ class Converters {
     private val gson = Gson()
 
     @TypeConverter
-    fun fromLongList(value: List<Long>): String {
+    fun fromLongSetToString(value: Set<Long>): String {
         return gson.toJson(value)
     }
 
     @TypeConverter
-    fun toLongList(value: String): List<Long> {
-        val listType = object : TypeToken<List<Long>>() {}.type
-        return gson.fromJson(value, listType)
+    fun fromStringToLongSet(value: String): Set<Long> {
+        val type = object : TypeToken<Set<Long>>() {}.type
+        return gson.fromJson(value, type)
     }
 }

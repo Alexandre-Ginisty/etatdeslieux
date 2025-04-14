@@ -23,5 +23,7 @@ data class Photo(
     val roomId: Long,
     val uri: String,
     val comment: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val order: Int = 0  // Pour la réorganisation
+
 )

@@ -11,6 +11,6 @@ data class RoomGroup(
     val id: Long = 0,
     val name: String,
     @TypeConverters(Converters::class)
-    val roomIds: List<Long>,
+    val roomIds: Set<Long> = emptySet(),
     val isExpanded: Boolean = false
 )

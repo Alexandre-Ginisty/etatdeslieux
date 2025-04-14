@@ -1,87 +1,92 @@
 package com.example.etatdeslieux.ui.navigation
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavGraphBuilder
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.etatdeslieux.ui.screens.addroom.AddRoomScreen
 import com.example.etatdeslieux.ui.screens.home.HomeScreen
-import com.example.etatdeslieux.ui.screens.room.RoomScreen
-import com.example.etatdeslieux.ui.screens.room.RoomViewModel
-import com.example.etatdeslieux.utils.ComposeFileProvider
+import com.example.etatdeslieux.ui.screens.addroom.AddRoomScreen
+import com.example.etatdeslieux.ui.screens.main.MainScreen
+import com.example.etatdeslieux.ui.screens.room.RoomDetailScreen
 
 sealed class Screen(val route: String) {
+    object Main : Screen("main")
     object Home : Screen("home")
     object AddRoom : Screen("add_room")
-    object Room : Screen("room/{roomId}") {
-        fun createRoute(roomId: Long) = "room/$roomId"
+    object WorkingOnIt : Screen("working_on_it")
+    object RoomDetail : Screen("room_detail/{roomId}") {
+        fun createRoute(roomId: Long) = "room_detail/$roomId"
     }
 }
 
 @Composable
-fun NavGraph(navController: NavHostController) {
+fun NavGraph(
+    navController: NavHostController,
+    startDestination: String = Screen.Main.route
+) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = startDestination
     ) {
-        addNavGraph(navController = navController)
-    }
-}
-
-fun NavGraphBuilder.addNavGraph(
-    navController: NavHostController
-) {
-    composable(route = Screen.Home.route) {
-        HomeScreen(
-            onNavigateToAddRoom = { navController.navigate(Screen.AddRoom.route) },
-            onNavigateToRoom = { roomId -> navController.navigate(Screen.Room.createRoute(roomId)) }
-        )
-    }
-
-    composable(route = Screen.AddRoom.route) {
-        AddRoomScreen(
-            onNavigateBack = { navController.popBackStack() },
-            onRoomAdded = { navController.popBackStack() }
-        )
-    }
-
-    composable(
-        route = Screen.Room.route,
-        arguments = listOf(navArgument("roomId") { type = NavType.LongType })
-    ) { backStackEntry ->
-        val roomId = backStackEntry.arguments?.getLong("roomId") ?: return@composable
-        var photoUri by remember { mutableStateOf<Uri?>(null) }
-        val context = LocalContext.current
-        val viewModel: RoomViewModel = hiltViewModel()
-
-        val cameraLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.TakePicture()
-        ) { success ->
-            if (success && photoUri != null) {
-                // Afficher le dialogue de commentaire
-                photoUri?.let { uri ->
-                    viewModel.addPhoto(uri, "")
-                }
-            }
-            photoUri = null
+        composable(Screen.Main.route) {
+            MainScreen(
+                onNavigateToEtatDesLieux = { navController.navigate(Screen.Home.route) },
+                onNavigateToWorkingOnIt = { navController.navigate(Screen.WorkingOnIt.route) }
+            )
         }
 
-        RoomScreen(
-            roomId = roomId,
-            onNavigateBack = { navController.popBackStack() },
-            onTakePhoto = {
-                val uri = ComposeFileProvider.getImageUri(context)
-                photoUri = uri
-                cameraLauncher.launch(uri)
+        composable(Screen.Home.route) {
+            HomeScreen(
+                onNavigateToRoom = { roomId ->
+                    navController.navigate(Screen.RoomDetail.createRoute(roomId))
+                },
+                onNavigateToAddRoom = {
+                    navController.navigate(Screen.AddRoom.route)
+                }
+            )
+        }
+
+        composable(Screen.WorkingOnIt.route) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Fonctionnalité en développement")
             }
-        )
+        }
+
+        composable(Screen.AddRoom.route) {
+            AddRoomScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onRoomAdded = { roomId ->
+                    navController.navigate(Screen.RoomDetail.createRoute(roomId)) {
+                        popUpTo(Screen.Home.route)
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Screen.RoomDetail.route,
+            arguments = listOf(
+                navArgument("roomId") { type = NavType.LongType }
+            )
+        ) {
+            val roomId = it.arguments?.getLong("roomId") ?: return@composable
+            RoomDetailScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
     }
 }

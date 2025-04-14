@@ -4,9 +4,10 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.etatdeslieux.data.PhotoDao
-import com.example.etatdeslieux.data.RoomDao
+import com.example.etatdeslieux.data.repository.PhotoRepository
+import com.example.etatdeslieux.data.repository.RoomRepository
 import com.example.etatdeslieux.model.Photo
+import com.example.etatdeslieux.model.Room
 import com.example.etatdeslieux.utils.PhotoStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -14,82 +15,190 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import android.util.Log
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flow
+import java.io.IOException
+
 
 @HiltViewModel
 class RoomViewModel @Inject constructor(
-    private val roomDao: RoomDao,
-    private val photoDao: PhotoDao,
+    private val roomRepository: RoomRepository,
+    private val photoRepository: PhotoRepository,
     private val photoStorage: PhotoStorage,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val roomId: Long = savedStateHandle.get<Long>("roomId") ?: 0L
+    private val roomId: Long = checkNotNull(savedStateHandle.get<Long>("roomId")) { "roomId is required" }
+
+    private val _room = MutableStateFlow<Room?>(null)
+    val room: StateFlow<Room?> = _room.asStateFlow()
+
+    private val _photos = MutableStateFlow<List<Photo>>(emptyList())
+    val photos: StateFlow<List<Photo>> = _photos.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    val room = roomDao.getRoomById(roomId).stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = null
+    data class RoomUiState(
+        val isLoading: Boolean = false,
+        val room: Room? = null,
+        val photos: List<Photo> = emptyList(),
+        val error: String? = null,
     )
 
-    val photos = roomDao.getRoomById(roomId).flatMapLatest { room ->
-        if (room != null) {
-            photoDao.getPhotosByRoom(roomId)
-        } else {
-            flow { emit(emptyList()) }
-        }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    private val _uiState = MutableStateFlow(RoomUiState())
+    val uiState: StateFlow<RoomUiState> = _uiState.asStateFlow()
+
+    private var currentPhotoUri: Uri? = null
 
     init {
-        if (roomId == 0L) {
-            _error.value = "ID de salle invalide"
+        if (roomId != 0L) {
+            loadRoomData()
+        } else {
+            _uiState.value = _uiState.value.copy(error = "ID de salle invalide")
         }
     }
 
-    fun addPhoto(uri: Uri, comment: String) {
-        if (roomId == 0L) return
+    fun loadRoomData() {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                val storedPath = photoStorage.savePhoto(uri)
-                if (storedPath != null) {
-                    val photo = Photo(
-                        roomId = roomId,
-                        uri = storedPath,
-                        comment = comment
-                    )
-                    photoDao.insert(photo)
-                } else {
-                    _error.value = "Erreur lors de la sauvegarde de la photo"
-                }
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            
+            combine(
+                roomRepository.getRoomById(roomId),
+                photoRepository.getPhotosByRoomId(roomId)
+            ) { room, photos ->
+                RoomUiState(
+                    room = room,
+                    photos = photos,
+                    isLoading = false
+                )
+            }.catch { e ->
+                Log.e("RoomViewModel", "Error loading room data", e)
+                _uiState.value = _uiState.value.copy(
+                    error = "Erreur de chargement: ${e.message}",
+                    isLoading = false
+                )
+            }.collect { state ->
+                _uiState.value = state
             }
+        }
+    }
+
+    fun preparePhotoCapture(): Uri? {
+        return try {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            photoStorage.createTempPhotoUri().also { 
+                currentPhotoUri = it
+                Log.d("RoomViewModel", "Prepared photo URI: $it")
+            }
+        } catch (e: Exception) {
+            Log.e("RoomViewModel", "Error preparing photo capture", e)
+            _uiState.value = _uiState.value.copy(error = "Erreur de préparation photo: ${e.message}")
+            null
+        }
+    }
+
+    fun handlePhotoCapture() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+                val uri = currentPhotoUri ?: throw IllegalStateException("No photo URI available")
+                Log.d("RoomViewModel", "Handling photo capture: $uri")
+                
+                addPhoto(uri)
+                currentPhotoUri = null
+                
+            } catch (e: Exception) {
+                Log.e("RoomViewModel", "Photo capture failed", e)
+                _uiState.value = _uiState.value.copy(
+                    error = "Échec de capture photo: ${e.message}"
+                )
+            }
+        }
+    }
+    fun updateRoom(room: Room) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+                roomRepository.updateRoom(room)
+            } catch (e: Exception) {
+                Log.e("RoomViewModel", "Failed to update room", e)
+                _uiState.value = _uiState.value.copy(
+                    error = "Échec de mise à jour: ${e.message}"
+                )
+            }
+        }
+    }
+
+    suspend fun addPhoto(uri: Uri) {
+        try {
+            Log.d("RoomViewModel", "Saving photo: $uri")
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            val permanentPath = photoStorage.savePhoto(uri) ?: throw IOException("Failed to save photo")
+            
+            val photo = Photo(
+                roomId = roomId,
+                uri = permanentPath,
+                timestamp = System.currentTimeMillis(),
+                comment = ""
+            )
+            
+            photoRepository.insertPhoto(photo)
+            Log.d("RoomViewModel", "Photo saved successfully: $permanentPath")
+            
+        } catch (e: Exception) {
+            Log.e("RoomViewModel", "Failed to add photo", e)
+            throw IOException("Failed to save photo: ${e.message}", e)
         }
     }
 
     fun updatePhoto(photo: Photo) {
-        if (roomId == 0L) return
-        viewModelScope.launch {
-            photoDao.update(photo)
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            try {
+                photoRepository.updatePhoto(photo)
+            } catch (e: Exception) {
+                Log.e("RoomViewModel", "Failed to update photo", e)
+                _uiState.value = _uiState.value.copy(error = "Échec de mise à jour: ${e.message}")
+            }
         }
+
     }
 
-    fun deletePhoto(photo: Photo) {
-        if (roomId == 0L) return
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                photoStorage.deletePhoto(photo.uri)
-                photoDao.delete(photo)
+
+fun deletePhoto(photo: Photo) {
+    viewModelScope.launch(Dispatchers.IO) {
+        try {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+
+            photoStorage.deletePhoto(photo.uri)
+            photoRepository.deletePhoto(photo)
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(
+                error = "Échec de suppression: ${e.message}"
+            )
+        } finally {
+            _uiState.value = _uiState.value.copy(isLoading = false)
+        }
+    }
+}
+
+    fun deleteRoom() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+
+                photoRepository.deletePhotosByRoomId(roomId)
+                roomRepository.deleteRoom(roomId)
+            } catch (e: Exception) {
+                Log.e("RoomViewModel", "Failed to delete room", e)
+                _uiState.value = _uiState.value.copy(error = "Échec de suppression: ${e.message}")
             }
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        // Nettoyer les ressources si nécessaire
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
     }
 }

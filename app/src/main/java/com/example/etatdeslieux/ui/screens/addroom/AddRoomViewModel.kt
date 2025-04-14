@@ -5,83 +5,82 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.etatdeslieux.data.RoomDao
+import com.example.etatdeslieux.data.repository.RoomRepository
 import com.example.etatdeslieux.model.Room
 import com.example.etatdeslieux.model.EtatType
-import com.example.etatdeslieux.repository.RoomGroupRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class AddRoomViewModel @Inject constructor(
-    private val roomDao: RoomDao,
-    private val roomGroupRepository: RoomGroupRepository
+    private val roomRepository: RoomRepository
 ) : ViewModel() {
 
-    var isRoomAdded by mutableStateOf(false)
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    var name by mutableStateOf("")
         private set
 
-    var hasAttemptedToSubmit by mutableStateOf(false)
+    var description by mutableStateOf("")
         private set
 
-    fun createRoom(
-        name: String,
-        description: String,
-        size: String,
-        floor: String,
-        creator: String,
-        etatType: EtatType,
-        onError: (String) -> Unit
-    ) {
-        hasAttemptedToSubmit = true
+    var size by mutableStateOf("")
+        private set
 
-        // Validation simple
-        if (name.isBlank()) {
-            onError("Le nom de la pièce est requis")
-            return
-        }
+    var floor by mutableStateOf("")
+        private set
 
-        val sizeFloat = size.toFloatOrNull()
-        if (sizeFloat == null || sizeFloat <= 0) {
-            onError("La taille doit être un nombre positif")
-            return
-        }
+    var creator by mutableStateOf("")
+        private set
 
-        val floorInt = floor.toIntOrNull()
-        if (floorInt == null) {
-            onError("L'étage doit être un nombre valide")
-            return
-        }
+    var etatType by mutableStateOf(EtatType.ENTREE)
+        private set
 
-        if (creator.isBlank()) {
-            onError("Le créateur est requis")
-            return
-        }
+    fun updateName(newName: String) {
+        name = newName
+    }
 
-        // Création de la pièce
+    fun updateDescription(newDescription: String) {
+        description = newDescription
+    }
+
+    fun updateSize(newSize: String) {
+        size = newSize
+    }
+
+    fun updateFloor(newFloor: String) {
+        floor = newFloor
+    }
+
+    fun updateCreator(newCreator: String) {
+        creator = newCreator
+    }
+
+    fun updateEtatType(newEtatType: EtatType) {
+        etatType = newEtatType
+    }
+
+    fun createRoom(onSuccess: (Long) -> Unit) {
         viewModelScope.launch {
             try {
                 val room = Room(
                     name = name,
                     description = description,
-                    size = sizeFloat,
-                    floor = floorInt,
+                    size = size.toFloatOrNull() ?: 0f,
+                    floor = floor.toIntOrNull() ?: 0,
                     creator = creator,
                     etatType = etatType.name,
-                    etatNumber = 1 // Sera mis à jour automatiquement par Room
+                    etatNumber = 1
                 )
-                val newRoomId = roomDao.insertRoom(room)
-                
-                // Si un groupe cible est défini, ajouter la pièce au groupe
-                roomGroupRepository.getTargetGroupForNewRoom()?.let { groupId ->
-                    roomGroupRepository.addRoomToGroup(groupId, newRoomId)
-                    roomGroupRepository.clearTargetGroupForNewRoom()
-                }
-                
-                isRoomAdded = true
+                val newRoomId = roomRepository.insertRoom(room)
+                onSuccess(newRoomId)
             } catch (e: Exception) {
-                onError("Erreur lors de la création de la pièce: ${e.message}")
+                _error.value = "Erreur lors de la création : ${e.message}"
             }
         }
     }

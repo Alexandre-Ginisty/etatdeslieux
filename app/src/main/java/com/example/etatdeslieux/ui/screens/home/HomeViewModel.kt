@@ -2,156 +2,161 @@ package com.example.etatdeslieux.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.etatdeslieux.data.RoomDao
-import com.example.etatdeslieux.data.RoomGroupDao
+import com.example.etatdeslieux.data.repository.RoomGroupRepository
+import com.example.etatdeslieux.data.repository.RoomRepository
 import com.example.etatdeslieux.model.Room
 import com.example.etatdeslieux.model.RoomGroup
-import com.example.etatdeslieux.repository.RoomGroupRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class HomeUiState(
+    val rooms: List<Room> = emptyList(),
+    val roomGroups: List<RoomGroup> = emptyList(),
+    val selectedGroup: RoomGroup? = null,
+    val isLoading: Boolean = true,
+    val isExpanded: Boolean = false,
+    val error: String? = null
+)
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val roomDao: RoomDao,
-    private val roomGroupDao: RoomGroupDao,
+    private val roomRepository: RoomRepository,
     private val roomGroupRepository: RoomGroupRepository
 ) : ViewModel() {
 
-    private val _selectedRoom = MutableStateFlow<Room?>(null)
-    val selectedRoom: StateFlow<Room?> = _selectedRoom.asStateFlow()
-
+    private val _rooms = MutableStateFlow<List<Room>>(emptyList())
+    private val _roomGroups = MutableStateFlow<List<RoomGroup>>(emptyList())
+    private val _isLoading = MutableStateFlow(true)
     private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
 
-    val rooms: StateFlow<List<Room>> = roomDao.getAllRooms()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Lazily,
-            initialValue = emptyList()
+    val uiState: StateFlow<HomeUiState> = combine(
+        _rooms,
+        _roomGroups,
+        _isLoading,
+        _error
+    ) { rooms, groups, isLoading, error ->
+        HomeUiState(
+            rooms = rooms,
+            roomGroups = groups,
+            isLoading = isLoading,
+            error = error
         )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = HomeUiState(isLoading = true)
+    )
 
-    val groups: StateFlow<List<RoomGroup>> = roomGroupDao.getAllGroups()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Lazily,
-            initialValue = emptyList()
-        )
-
-    fun selectRoom(room: Room) {
-        _selectedRoom.value = room
+    init {
+        loadData()
     }
 
-    fun clearSelectedRoom() {
-        _selectedRoom.value = null
-    }
+    private fun loadData() {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                roomRepository.getAllRooms()
+                    .catch { e -> 
+                        _error.value = e.message
+                        _isLoading.value = false
+                    }
+                    .collect { rooms -> 
+                        _rooms.value = rooms
+                        _isLoading.value = false
+                    }
+            } catch (e: Exception) {
+                _error.value = e.message
+                _isLoading.value = false
+            }
+        }
 
-    fun setTargetGroupForNewRoom(groupId: Long) {
-        roomGroupRepository.setTargetGroupForNewRoom(groupId)
-    }
-
-    fun clearTargetGroupForNewRoom() {
-        roomGroupRepository.clearTargetGroupForNewRoom()
+        viewModelScope.launch {
+            try {
+                roomGroupRepository.getAllRoomGroups()
+                    .catch { e -> _error.value = e.message }
+                    .collect { groups ->
+                        _roomGroups.value = groups
+                    }
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
     }
 
     fun deleteRoom(room: Room) {
         viewModelScope.launch {
             try {
-                roomDao.deleteRoom(room)
-                // Supprimer la référence du room de tous les groupes qui le contiennent
-                groups.value.forEach { group ->
+                roomRepository.deleteRoom(room.id)
+                _rooms.value = _rooms.value.filter { it.id != room.id }
+                
+                // Mettre à jour les groupes
+                _roomGroups.value = _roomGroups.value.map { group ->
                     if (room.id in group.roomIds) {
-                        val updatedRoomIds = group.roomIds.filter { it != room.id }
-                        roomGroupDao.updateGroup(group.copy(roomIds = updatedRoomIds))
+                        val updatedGroup = group.copy(roomIds = group.roomIds - room.id)
+                        // Mettre à jour le groupe dans le repository
+                        roomGroupRepository.updateRoomGroup(updatedGroup)
+                        updatedGroup
+                    } else {
+                        group
                     }
                 }
             } catch (e: Exception) {
-                _error.value = "Erreur lors de la suppression : ${e.message}"
+                _error.value = e.message ?: "Erreur lors de la suppression de la pièce"
             }
         }
     }
 
-    fun updateRoom(room: Room) {
+    fun toggleGroupExpanded(groupId: Long) {
         viewModelScope.launch {
             try {
-                roomDao.updateRoom(room)
-            } catch (e: Exception) {
-                _error.value = "Erreur lors de la mise à jour : ${e.message}"
-            }
-        }
-    }
-
-    fun createGroup(name: String, roomIds: List<Long> = emptyList()) {
-        viewModelScope.launch {
-            try {
-                val group = RoomGroup(name = name, roomIds = roomIds)
-                roomGroupDao.insertGroup(group)
-            } catch (e: Exception) {
-                _error.value = "Erreur lors de la création du groupe : ${e.message}"
-            }
-        }
-    }
-
-    fun updateGroup(group: RoomGroup) {
-        viewModelScope.launch {
-            try {
-                roomGroupDao.updateGroup(group)
-            } catch (e: Exception) {
-                _error.value = "Erreur lors de la mise à jour du groupe : ${e.message}"
-            }
-        }
-    }
-
-    fun toggleGroupExpansion(groupId: Long) {
-        viewModelScope.launch {
-            try {
-                val group = groups.value.find { it.id == groupId }
-                if (group != null) {
-                    roomGroupDao.updateGroup(group.copy(isExpanded = !group.isExpanded))
+                val group = _roomGroups.value.find { it.id == groupId } ?: return@launch
+                val updatedGroup = group.copy(isExpanded = !group.isExpanded)
+                roomGroupRepository.updateRoomGroup(updatedGroup)
+                _roomGroups.value = _roomGroups.value.map {
+                    if (it.id == groupId) updatedGroup else it
                 }
             } catch (e: Exception) {
-                _error.value = "Erreur lors de la mise à jour du groupe : ${e.message}"
+                _error.value = e.message
             }
         }
     }
 
-    fun deleteGroup(group: RoomGroup) {
+    fun createRoomGroup(name: String, roomIds: Set<Long>) {
         viewModelScope.launch {
             try {
-                roomGroupDao.deleteGroup(group)
+                val newGroup = RoomGroup(
+                    name = name,
+                    roomIds = roomIds,
+                    isExpanded = true
+                )
+                val id = roomGroupRepository.insertRoomGroup(newGroup)
+                _roomGroups.value = _roomGroups.value + newGroup.copy(id = id)
             } catch (e: Exception) {
-                _error.value = "Erreur lors de la suppression du groupe : ${e.message}"
+                _error.value = e.message
             }
         }
     }
 
-    fun addRoomToGroup(groupId: Long, roomId: Long) {
+    fun deleteGroup(group: RoomGroup, deleteRooms: Boolean) {
         viewModelScope.launch {
             try {
-                val group = groups.value.find { it.id == groupId }
-                if (group != null) {
-                    val updatedRoomIds = group.roomIds + roomId
-                    roomGroupDao.updateGroup(group.copy(roomIds = updatedRoomIds))
+                if (deleteRooms) {
+                    group.roomIds.forEach { roomId ->
+                        roomRepository.deleteRoom(roomId)
+                    }
+                    _rooms.value = _rooms.value.filter { it.id !in group.roomIds }
                 }
+                roomGroupRepository.deleteRoomGroup(group)
+                _roomGroups.value = _roomGroups.value.filter { it.id != group.id }
             } catch (e: Exception) {
-                _error.value = "Erreur lors de l'ajout de la pièce au groupe : ${e.message}"
+                _error.value = e.message
             }
         }
     }
 
-    fun addExistingRoomToGroup(groupId: Long, roomId: Long) {
-        viewModelScope.launch {
-            try {
-                // Vérifier si la pièce n'est pas déjà dans le groupe
-                val group = groups.value.find { it.id == groupId }
-                if (group != null && roomId !in group.roomIds) {
-                    val updatedRoomIds = group.roomIds + roomId
-                    roomGroupDao.updateGroup(group.copy(roomIds = updatedRoomIds))
-                }
-            } catch (e: Exception) {
-                _error.value = "Erreur lors de l'ajout de la pièce au groupe : ${e.message}"
-            }
-        }
+    fun clearError() {
+        _error.value = null
     }
 }
