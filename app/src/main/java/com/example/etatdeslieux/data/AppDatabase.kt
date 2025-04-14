@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.example.etatdeslieux.data.converter.DateTimeConverter
+import com.example.etatdeslieux.data.converter.SetConverter
 import com.example.etatdeslieux.data.dao.PhotoDao
 import com.example.etatdeslieux.data.dao.RoomDao
 import com.example.etatdeslieux.data.dao.RoomGroupDao
@@ -14,10 +16,10 @@ import com.example.etatdeslieux.model.RoomGroup
 
 @Database(
     entities = [ModelRoom::class, Photo::class, RoomGroup::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
-@TypeConverters(Converters::class)
+@TypeConverters(DateTimeConverter::class, SetConverter::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun roomDao(): RoomDao
     abstract fun photoDao(): PhotoDao

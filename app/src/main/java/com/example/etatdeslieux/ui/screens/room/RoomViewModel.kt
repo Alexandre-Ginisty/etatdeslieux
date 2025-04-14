@@ -11,15 +11,15 @@ import com.example.etatdeslieux.model.Room
 import com.example.etatdeslieux.utils.PhotoStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.time.LocalDateTime
 import javax.inject.Inject
 import android.util.Log
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
-import java.io.IOException
-
 
 @HiltViewModel
 class RoomViewModel @Inject constructor(
@@ -210,5 +210,20 @@ fun deletePhoto(photo: Photo) {
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+    
+    fun saveRoom(room: Room) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+                room.createdAt = LocalDateTime.now()
+                roomRepository.insertRoom(room)
+            } catch (e: Exception) {
+                Log.e("RoomViewModel", "Failed to save room", e)
+                _uiState.value = _uiState.value.copy(
+                    error = "Échec de sauvegarde: ${e.message}"
+                )
+            }
+        }
     }
 }

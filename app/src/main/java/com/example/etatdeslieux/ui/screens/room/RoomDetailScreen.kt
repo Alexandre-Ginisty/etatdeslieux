@@ -1,5 +1,7 @@
 package com.example.etatdeslieux.ui.screens.room
 
+import android.os.Parcel
+import android.os.Parcelable
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,15 +20,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.etatdeslieux.model.Room
+import com.example.etatdeslieux.model.DialogStates
 import com.example.etatdeslieux.model.Photo
+import com.example.etatdeslieux.model.Room
 import com.example.etatdeslieux.ui.components.CameraPermission
 import com.example.etatdeslieux.ui.components.PhotoSection
-import com.example.etatdeslieux.ui.screens.room.RoomViewModel
-import com.example.etatdeslieux.utils.ComposeFileProvider
-import kotlinx.coroutines.Dispatchers
+import com.example.etatdeslieux.utils.DateFormatter
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +48,6 @@ fun RoomDetailScreen(
             }
         }
     }
-
 
     // Handle errors
     LaunchedEffect(uiState.error) {
@@ -94,7 +93,9 @@ fun RoomDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 uiState.room?.let { room ->
-                    item { RoomInfoSection(room) }
+                    item {
+                        RoomInfoSection(room)
+                    }
                     item {
                         PhotoSection(
                             photos = uiState.photos,
@@ -151,10 +152,6 @@ fun RoomDetailScreen(
         )
     }
 }
-
-// Keep the rest of the code (DeleteDialog, EditDialog, RoomInfoSection, InfoRow, and DialogStates) unchanged
-
-
 
 @Composable
 private fun DeleteDialog(
@@ -261,7 +258,6 @@ private fun EditDialog(
     )
 }
 
-
 @Composable
 private fun RoomInfoSection(room: Room) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -270,6 +266,7 @@ private fun RoomInfoSection(room: Room) {
         InfoRow(Icons.Default.Stairs, "Étage", room.floor.toString())
         InfoRow(Icons.Default.SquareFoot, "Taille", "${room.size} m²")
         InfoRow(Icons.Default.Person, "Créateur", room.creator)
+        InfoRow(Icons.Default.AccessTime, "Créé le", DateFormatter.formatLocalDateTime(room.createdAt))
     }
 }
 
@@ -286,13 +283,15 @@ private fun InfoRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.width(8.dp))
         Column {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = value,
@@ -306,4 +305,31 @@ private data class DialogStates(
     val showDeleteDialog: Boolean = false,
     val showEditDialog: Boolean = false,
     val showCameraPermission: Boolean = false
-)
+) : Parcelable {
+    constructor(parcel: Parcel) : this(
+        parcel.readByte() != 0.toByte(),
+        parcel.readByte() != 0.toByte(),
+        parcel.readByte() != 0.toByte()
+    ) {
+    }
+
+    override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeByte(if (showDeleteDialog) 1 else 0)
+        parcel.writeByte(if (showEditDialog) 1 else 0)
+        parcel.writeByte(if (showCameraPermission) 1 else 0)
+    }
+
+    override fun describeContents(): Int {
+        return 0
+    }
+
+    companion object CREATOR : Parcelable.Creator<DialogStates> {
+        override fun createFromParcel(parcel: Parcel): DialogStates {
+            return DialogStates(parcel)
+        }
+
+        override fun newArray(size: Int): Array<DialogStates?> {
+            return arrayOfNulls(size)
+        }
+    }
+}

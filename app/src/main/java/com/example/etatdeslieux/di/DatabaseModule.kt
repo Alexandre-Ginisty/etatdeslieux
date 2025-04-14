@@ -1,6 +1,7 @@
 package com.example.etatdeslieux.di
 
 import android.content.Context
+import androidx.room.Room
 import com.example.etatdeslieux.data.AppDatabase
 import com.example.etatdeslieux.data.dao.PhotoDao
 import com.example.etatdeslieux.data.dao.RoomDao
@@ -18,26 +19,29 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
+
+    @Provides
     @Singleton
-    @Provides
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
-        return AppDatabase.getDatabase(context)
+    fun provideDatabase(
+        @ApplicationContext context: Context
+    ): AppDatabase {
+        return Room.databaseBuilder(
+            context,
+            AppDatabase::class.java,
+            "app_database"
+        )
+        .fallbackToDestructiveMigration() // Pour la migration vers la version 2
+        .build()
     }
 
     @Provides
-    fun provideRoomDao(database: AppDatabase): RoomDao {
-        return database.roomDao()
-    }
+    fun provideRoomDao(database: AppDatabase) = database.roomDao()
 
     @Provides
-    fun providePhotoDao(database: AppDatabase): PhotoDao {
-        return database.photoDao()
-    }
+    fun providePhotoDao(database: AppDatabase) = database.photoDao()
 
     @Provides
-    fun provideRoomGroupDao(database: AppDatabase): RoomGroupDao {
-        return database.roomGroupDao()
-    }
+    fun provideRoomGroupDao(database: AppDatabase) = database.roomGroupDao()
 
     @Singleton
     @Provides
