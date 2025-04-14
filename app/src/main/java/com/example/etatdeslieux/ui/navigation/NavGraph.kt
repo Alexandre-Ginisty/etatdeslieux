@@ -38,7 +38,8 @@ fun NavGraph(
         composable(Screen.Main.route) {
             MainScreen(
                 onNavigateToEtatDesLieux = { navController.navigate(Screen.Home.route) },
-                onNavigateToWorkingOnIt = { navController.navigate(Screen.WorkingOnIt.route) }
+                onNavigateToWorkingOnIt = { navController.navigate(Screen.WorkingOnIt.route) },
+                onNavigateToPortal = { navController.navigate(Screen.Main.route) }
             )
         }
 
@@ -49,6 +50,11 @@ fun NavGraph(
                 },
                 onNavigateToAddRoom = {
                     navController.navigate(Screen.AddRoom.route)
+                },
+                onNavigateToPortal = {
+                    navController.navigate(Screen.Main.route) {
+                        popUpTo(Screen.Main.route) { inclusive = true }
+                    }
                 }
             )
         }

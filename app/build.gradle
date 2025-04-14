@@ -95,6 +95,14 @@ dependencies {
     // Gson
     implementation 'com.google.code.gson:gson:2.10.1'
 
+    // PDF Generation
+    implementation 'com.itextpdf:itext7-core:7.2.5'
+
+    // Animations
+    implementation "androidx.compose.animation:animation:1.5.4"
+    implementation "androidx.compose.animation:animation-graphics:1.5.4"
+    implementation "androidx.compose.animation:animation-core:1.5.4"
+
     // Tests
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'

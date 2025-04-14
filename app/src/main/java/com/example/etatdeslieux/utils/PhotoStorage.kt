@@ -36,6 +36,19 @@ class PhotoStorage @Inject constructor(
             Log.d("PhotoStorage", "Starting photo save process for uri: $uri")
             Log.d("PhotoStorage", "Saving to: ${destFile.absolutePath}")
 
+            // Vérifier que l'URI est valide
+            if (uri.scheme == null || (!uri.scheme.equals("content") && !uri.scheme.equals("file"))) {
+                throw IOException("Invalid URI scheme: ${uri.scheme}")
+            }
+
+            // Vérifier que l'URI pointe vers un fichier existant
+            if (uri.scheme.equals("file")) {
+                val file = File(uri.path ?: "")
+                if (!file.exists()) {
+                    throw IOException("Source file does not exist: ${uri.path}")
+                }
+            }
+
             context.contentResolver.openInputStream(uri)?.use { input ->
                 BufferedInputStream(input).use { bufferedInput ->
                     FileOutputStream(destFile).use { output ->
@@ -112,6 +125,11 @@ class PhotoStorage @Inject constructor(
             if (!exists()) mkdirs()
         }
         val photoFile = File.createTempFile(imageFileName, ".jpg", directory)
+        
+        // S'assurer que le fichier est créé et vide
+        photoFile.createNewFile()
+        photoFile.setWritable(true)
+        
         return FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",

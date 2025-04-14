@@ -10,7 +10,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun MainScreen(
     onNavigateToEtatDesLieux: () -> Unit,
-    onNavigateToWorkingOnIt: () -> Unit
+    onNavigateToWorkingOnIt: () -> Unit,
+    onNavigateToPortal: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -37,6 +38,17 @@ fun MainScreen(
                 .height(56.dp)
         ) {
             Text("Working on it")
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Button(
+            onClick = onNavigateToPortal,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+        ) {
+            Text("Portal")
         }
     }
 }

@@ -156,6 +156,23 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun addRoomToGroup(roomId: Long, groupId: Long) {
+        viewModelScope.launch {
+            try {
+                val group = _roomGroups.value.find { it.id == groupId }
+                if (group != null) {
+                    val updatedGroup = group.copy(roomIds = group.roomIds + roomId)
+                    roomGroupRepository.updateRoomGroup(updatedGroup)
+                    _roomGroups.value = _roomGroups.value.map {
+                        if (it.id == groupId) updatedGroup else it
+                    }
+                }
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
+    }
+
     fun clearError() {
         _error.value = null
     }

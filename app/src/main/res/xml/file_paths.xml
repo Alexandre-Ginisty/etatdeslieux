@@ -9,4 +9,7 @@
     <cache-path
         name="images"
         path="images/" />
+    <cache-path
+        name="temp"
+        path="." />
 </paths>
