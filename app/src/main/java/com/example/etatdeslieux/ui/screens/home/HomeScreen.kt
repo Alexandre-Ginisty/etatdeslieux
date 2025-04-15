@@ -8,8 +8,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -23,10 +28,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.etatdeslieux.R
 import com.example.etatdeslieux.ui.components.RoomGroupItem
+import com.example.etatdeslieux.ui.components.RoomItem
 import com.example.etatdeslieux.ui.components.RoomPreviewItem
 import com.example.etatdeslieux.ui.components.SettingsDialog
 
@@ -47,6 +54,32 @@ fun HomeScreen(
     var newGroupName by remember { mutableStateOf("") }
     var showFilterDialog by remember { mutableStateOf(false) }
     var showSearchDialog by remember { mutableStateOf(false) }
+
+    // Utiliser les valeurs du ViewModel pour la recherche
+    val searchQuery = uiState.searchQuery
+    val searchResults = uiState.searchResults
+    val currentSearchIndex = uiState.currentSearchIndex
+    val totalSearchResults = uiState.totalSearchResults
+
+    // Effet pour faire défiler jusqu'au résultat actuel
+    val currentSearchRoom = remember(currentSearchIndex) { 
+        if (currentSearchIndex >= 0 && searchResults.isNotEmpty()) 
+            searchResults.getOrNull(currentSearchIndex) 
+        else null 
+    }
+    
+    val listState = rememberLazyListState()
+    
+    LaunchedEffect(currentSearchRoom) {
+        currentSearchRoom?.let { room ->
+            // Trouver l'index de l'élément dans la liste
+            val roomIndex = uiState.rooms.indexOf(room)
+            if (roomIndex >= 0) {
+                // Faire défiler jusqu'à l'élément
+                listState.animateScrollToItem(roomIndex)
+            }
+        }
+    }
 
     val rotationAnimation by animateFloatAsState(
         targetValue = if (showCreateMenu) 45f else 0f,
@@ -75,6 +108,13 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showSearchDialog = !showSearchDialog }) {
+                        Icon(
+                            imageVector = if (showSearchDialog) Icons.Default.Close else Icons.Default.Search,
+                            contentDescription = if (showSearchDialog) "Fermer la recherche" else "Rechercher",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                     Image(
                         painter = painterResource(id = R.mipmap.ic_launcher_adaptive_fore),
                         contentDescription = "Logo de l'application",
@@ -100,75 +140,61 @@ fun HomeScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
+                    .padding(16.dp),
+                state = listState
             ) {
                 // Afficher les pièces non groupées
                 val ungroupedRooms = uiState.rooms.filter { currentRoom ->
-                    uiState.roomGroups.none { existingGroup -> currentRoom.id in existingGroup.roomIds }
+                    uiState.roomGroups.none { group -> currentRoom.id in group.roomIds }
                 }
-
+                
                 if (ungroupedRooms.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Pièces non groupées",
+                            text = "Pièces",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
-
-                    items(ungroupedRooms) { ungroupedRoom ->
-                        RoomPreviewItem(
-                            room = ungroupedRoom,
-                            onClick = { onNavigateToRoom(ungroupedRoom.id) },
-                            onDelete = { viewModel.deleteRoom(ungroupedRoom) },
-                            onAddToGroup = { roomToMove ->
-                                val availableGroups = uiState.roomGroups.filter { targetGroup ->
-                                    !targetGroup.roomIds.contains(roomToMove.id)
-                                }
-                                if (availableGroups.isNotEmpty()) {
-                                    availableGroups.firstOrNull()?.let { targetGroup ->
-                                        viewModel.addRoomToGroup(roomToMove.id, targetGroup.id)
-                                    }
-                                }
+                    
+                    items(ungroupedRooms) { room ->
+                        val isCurrentSearchResult = uiState.searchResults.isNotEmpty() && 
+                                                   uiState.currentSearchIndex >= 0 && 
+                                                   uiState.searchResults.getOrNull(uiState.currentSearchIndex) == room
+                        
+                        RoomItem(
+                            room = room,
+                            onClick = { onNavigateToRoom(room.id) },
+                            onLongClick = {
+                                // Ouvrir le menu contextuel pour la pièce
                             },
-                            availableGroups = uiState.roomGroups.filter { targetGroup ->
-                                !targetGroup.roomIds.contains(ungroupedRoom.id)
-                            }
+                            isHighlighted = isCurrentSearchResult,
+                            searchQuery = uiState.searchQuery
                         )
                     }
                 }
 
-                // Afficher les groupes
-                if (uiState.roomGroups.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "Groupes",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                        )
-                    }
+                // Afficher les groupes de pièces
+                items(uiState.roomGroups) { group ->
+                    val roomsInGroup = uiState.rooms.filter { room -> room.id in group.roomIds }
                     
-                    items(uiState.roomGroups) { currentGroup ->
-                        RoomGroupItem(
-                            group = currentGroup,
-                            rooms = uiState.rooms.filter { room -> room.id in currentGroup.roomIds },
-                            onGroupClick = { viewModel.toggleGroupExpanded(currentGroup.id) },
-                            onGroupDelete = { groupToUpdate, deleteRooms ->
-                                if (deleteRooms) {
-                                    groupToUpdate.roomIds.forEach { roomId ->
-                                        uiState.rooms.find { it.id == roomId }?.let { room ->
-                                            viewModel.deleteRoom(room)
-                                        }
-                                    }
-                                }
-                                viewModel.deleteGroup(groupToUpdate, deleteRooms)
-                            },
-                            onRoomClick = { room -> onNavigateToRoom(room.id) },
-                            onRoomDelete = { room -> viewModel.deleteRoom(room) },
-                            onRemoveRoomFromGroup = { groupId, roomId -> viewModel.removeRoomFromGroup(roomId, groupId) },
-                            modifier = Modifier.padding(bottom = 16.dp) // Espacement entre les groupes
-                        )
-                    }
+                    RoomGroupItem(
+                        group = group,
+                        rooms = roomsInGroup,
+                        onRoomClick = { room -> onNavigateToRoom(room.id) },
+                        onGroupClick = { viewModel.toggleGroupExpanded(group.id) },
+                        onRoomDelete = { room -> viewModel.deleteRoom(room) },
+                        onGroupDelete = { selectedGroup, deleteRooms ->
+                            viewModel.deleteGroup(selectedGroup, deleteRooms)
+                        },
+                        onRemoveRoomFromGroup = { groupId, roomId ->
+                            viewModel.removeRoomFromGroup(roomId, groupId)
+                        },
+                        searchQuery = uiState.searchQuery,
+                        currentSearchRoom = viewModel.getCurrentSearchRoom()
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
 
@@ -480,6 +506,137 @@ fun HomeScreen(
                         }
                     }
                 )
+            }
+
+            if (showSearchDialog) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 3.dp,
+                    shadowElevation = 3.dp,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { 
+                                    viewModel.updateSearchQuery(it)
+                                    // Recherche automatique lorsque l'utilisateur tape
+                                    if (it.length > 2) {
+                                        viewModel.searchRooms()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                placeholder = { Text("Rechercher...") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = { viewModel.searchRooms() }),
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "Rechercher",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = { 
+                                            viewModel.clearSearch()
+                                            showSearchDialog = false
+                                        }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Clear,
+                                                contentDescription = "Effacer",
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                    cursorColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
+                        
+                        AnimatedVisibility(
+                            visible = totalSearchResults > 0,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "$totalSearchResults résultat${if (totalSearchResults > 1) "s" else ""} trouvé${if (totalSearchResults > 1) "s" else ""}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    if (totalSearchResults > 0) {
+                                        Text(
+                                            text = "${currentSearchIndex + 1} / $totalSearchResults",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(end = 8.dp)
+                                        )
+                                    }
+                                    
+                                    FilledIconButton(
+                                        onClick = viewModel::previousSearchResult,
+                                        enabled = totalSearchResults > 1,
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowUp,
+                                            contentDescription = "Précédent"
+                                        )
+                                    }
+                                    
+                                    FilledIconButton(
+                                        onClick = viewModel::nextSearchResult,
+                                        enabled = totalSearchResults > 1,
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowDown,
+                                            contentDescription = "Suivant"
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

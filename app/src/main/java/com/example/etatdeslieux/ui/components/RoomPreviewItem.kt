@@ -66,21 +66,12 @@ fun RoomPreviewItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "État des lieux ${room.etatType} n°${room.etatNumber}",
+                    text = room.etatType,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (!isInGroup) {
-                    Text(
-                        text = "Créé le ${DateFormatter.formatLocalDateTime(room.createdAt)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
             }
         }
 

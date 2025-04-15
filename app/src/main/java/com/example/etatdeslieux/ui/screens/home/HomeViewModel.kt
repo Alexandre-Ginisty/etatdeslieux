@@ -26,7 +26,11 @@ data class HomeUiState(
     val isLoading: Boolean = true,
     val isExpanded: Boolean = false,
     val error: String? = null,
-    val sortOption: SortOption = SortOption.DATE_DESC
+    val sortOption: SortOption = SortOption.DATE_DESC,
+    val searchQuery: String = "",
+    val searchResults: List<Room> = emptyList(),
+    val currentSearchIndex: Int = -1,
+    val totalSearchResults: Int = 0
 )
 
 @HiltViewModel
@@ -40,14 +44,33 @@ class HomeViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     private val _error = MutableStateFlow<String?>(null)
     private val _sortOption = MutableStateFlow(SortOption.DATE_DESC)
+    private val _searchQuery = MutableStateFlow("")
+    private val _searchResults = MutableStateFlow<List<Room>>(emptyList())
+    private val _currentSearchIndex = MutableStateFlow(-1)
+    private val _totalSearchResults = MutableStateFlow(0)
 
     val uiState: StateFlow<HomeUiState> = combine(
         _rooms,
         _roomGroups,
         _isLoading,
         _error,
-        _sortOption
-    ) { rooms, groups, isLoading, error, sortOption ->
+        _sortOption,
+        _searchQuery,
+        _searchResults,
+        _currentSearchIndex,
+        _totalSearchResults
+    ) { array ->
+        // Utilisation de l'opérateur safe cast pour éviter les avertissements
+        val rooms = array[0] as? List<Room> ?: emptyList()
+        val groups = array[1] as? List<RoomGroup> ?: emptyList()
+        val isLoading = array[2] as? Boolean ?: true
+        val error = array[3] as? String?
+        val sortOption = array[4] as? SortOption ?: SortOption.DATE_DESC
+        val searchQuery = array[5] as? String ?: ""
+        val searchResults = array[6] as? List<Room> ?: emptyList()
+        val currentSearchIndex = array[7] as? Int ?: -1
+        val totalSearchResults = array[8] as? Int ?: 0
+        
         val sortedRooms = sortRooms(rooms, sortOption)
         val sortedGroups = sortGroups(groups, sortOption)
         
@@ -56,7 +79,11 @@ class HomeViewModel @Inject constructor(
             roomGroups = sortedGroups,
             isLoading = isLoading,
             error = error,
-            sortOption = sortOption
+            sortOption = sortOption,
+            searchQuery = searchQuery,
+            searchResults = searchResults,
+            currentSearchIndex = currentSearchIndex,
+            totalSearchResults = totalSearchResults
         )
     }.stateIn(
         scope = viewModelScope,
@@ -238,6 +265,76 @@ class HomeViewModel @Inject constructor(
                 _error.value = e.message
             }
         }
+    }
+
+    /**
+     * Met à jour la requête de recherche et filtre les résultats
+     * @param query La requête de recherche
+     */
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+        if (query.isBlank()) {
+            _searchResults.value = emptyList()
+            _currentSearchIndex.value = -1
+            _totalSearchResults.value = 0
+            return
+        }
+        
+        // Filtrer les pièces qui correspondent à la requête
+        val results = _rooms.value.filter { room ->
+            room.name.contains(query, ignoreCase = true) || 
+            (room.description.isNotBlank() && room.description.contains(query, ignoreCase = true))
+        }
+        
+        _searchResults.value = results
+        _totalSearchResults.value = results.size
+        _currentSearchIndex.value = if (results.isNotEmpty()) 0 else -1
+    }
+    
+    /**
+     * Navigue vers le résultat de recherche suivant
+     */
+    fun nextSearchResult() {
+        if (_searchResults.value.isEmpty()) return
+        
+        _currentSearchIndex.value = (_currentSearchIndex.value + 1) % _searchResults.value.size
+    }
+    
+    /**
+     * Navigue vers le résultat de recherche précédent
+     */
+    fun previousSearchResult() {
+        if (_searchResults.value.isEmpty()) return
+        
+        _currentSearchIndex.value = if (_currentSearchIndex.value <= 0) 
+            _searchResults.value.size - 1 
+        else 
+            _currentSearchIndex.value - 1
+    }
+    
+    /**
+     * Réinitialise la recherche
+     */
+    fun clearSearch() {
+        _searchQuery.value = ""
+        _searchResults.value = emptyList()
+        _currentSearchIndex.value = -1
+        _totalSearchResults.value = 0
+    }
+    
+    /**
+     * Obtient la pièce actuellement sélectionnée dans les résultats de recherche
+     */
+    fun getCurrentSearchRoom(): Room? {
+        if (_currentSearchIndex.value < 0 || _searchResults.value.isEmpty()) return null
+        return _searchResults.value.getOrNull(_currentSearchIndex.value)
+    }
+
+    /**
+     * Lance une recherche avec la requête actuelle
+     */
+    fun searchRooms() {
+        updateSearchQuery(_searchQuery.value)
     }
 
     fun clearError() {

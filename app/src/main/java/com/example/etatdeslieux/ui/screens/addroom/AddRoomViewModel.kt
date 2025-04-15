@@ -61,6 +61,26 @@ class AddRoomViewModel @Inject constructor(
     fun createRoom(onSuccess: (Long) -> Unit) {
         viewModelScope.launch {
             try {
+                // Vérifier que tous les champs obligatoires sont remplis
+                when {
+                    name.isBlank() -> {
+                        _error.value = "Le nom de la pièce est obligatoire"
+                        return@launch
+                    }
+                    description.isBlank() -> {
+                        _error.value = "La description est obligatoire"
+                        return@launch
+                    }
+                    floor.isBlank() -> {
+                        _error.value = "L'étage est obligatoire"
+                        return@launch
+                    }
+                    creator.isBlank() -> {
+                        _error.value = "Le nom du créateur est obligatoire"
+                        return@launch
+                    }
+                }
+                
                 val room = Room(
                     name = name,
                     description = description,
