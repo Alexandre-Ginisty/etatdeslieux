@@ -8,6 +8,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -36,6 +37,7 @@ fun RoomGroupItem(
     onGroupClick: () -> Unit,
     onRoomDelete: (Room) -> Unit,
     onGroupDelete: (RoomGroup, Boolean) -> Unit,
+    onRemoveRoomFromGroup: (Long, Long) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(group.isExpanded) }
@@ -43,6 +45,9 @@ fun RoomGroupItem(
         targetValue = if (expanded) 180f else 0f,
         label = "Arrow rotation"
     )
+    
+    // État pour le menu contextuel
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     // Carte du groupe avec bordures rectangulaires
     Card(
@@ -50,7 +55,7 @@ fun RoomGroupItem(
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onGroupClick,
-                onLongClick = { /* showMenu = true */ }
+                onLongClick = { showDeleteDialog = true }
             ),
         shape = RectangleShape, // Bordures rectangulaires pour les groupes
         colors = CardDefaults.cardColors(
@@ -132,11 +137,18 @@ fun RoomGroupItem(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     rooms.forEach { room ->
+                        // État pour le menu contextuel de la pièce
+                        var showRoomMenu by remember { mutableStateOf(false) }
+                        
                         // Carte d'état des lieux avec bordures arrondies
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = 4.dp)
+                                .combinedClickable(
+                                    onClick = { onRoomClick(room) },
+                                    onLongClick = { showRoomMenu = true }
+                                ),
                             shape = RoundedCornerShape(12.dp), // Bordures arrondies pour les états des lieux
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surface
@@ -144,7 +156,7 @@ fun RoomGroupItem(
                             elevation = CardDefaults.cardElevation(
                                 defaultElevation = 1.dp
                             ),
-                            onClick = { onRoomClick(room) }
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface) // Bordure noire
                         ) {
                             Row(
                                 modifier = Modifier
@@ -169,29 +181,16 @@ fun RoomGroupItem(
                                             style = MaterialTheme.typography.bodyLarge,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.AccessTime,
-                                                contentDescription = "Date de création",
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                            Text(
-                                                text = "Créé le ${DateFormatter.formatLocalDateTime(room.createdAt)}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                        if (room.description.isNotBlank()) {
-                                            Text(
-                                                text = room.description,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
+                                        Text(
+                                            text = "État des lieux ${room.etatType} n°${room.etatNumber}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "Créé le ${DateFormatter.formatLocalDateTime(room.createdAt)}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
                                 Icon(
@@ -201,9 +200,104 @@ fun RoomGroupItem(
                                 )
                             }
                         }
+                        
+                        // Menu contextuel pour la pièce
+                        if (showRoomMenu) {
+                            AlertDialog(
+                                onDismissRequest = { showRoomMenu = false },
+                                title = { Text("Options pour \"${room.name}\"") },
+                                text = { Text("Que souhaitez-vous faire avec cet état des lieux ?") },
+                                confirmButton = {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Button(
+                                            onClick = {
+                                                onRoomDelete(room)
+                                                showRoomMenu = false
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.error
+                                            ),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Supprimer l'état des lieux")
+                                        }
+                                        
+                                        Button(
+                                            onClick = {
+                                                onRemoveRoomFromGroup(group.id, room.id)
+                                                showRoomMenu = false
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Retirer du groupe")
+                                        }
+                                        
+                                        OutlinedButton(
+                                            onClick = { showRoomMenu = false },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Annuler")
+                                        }
+                                    }
+                                },
+                                dismissButton = null
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+    
+    // Dialogue de confirmation de suppression
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Supprimer le groupe") },
+            text = { 
+                Text("Voulez-vous supprimer le groupe \"${group.name}\" ? " +
+                     "Vous pouvez également supprimer toutes les pièces qu'il contient.")
+            },
+            confirmButton = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            onGroupDelete(group, true)
+                            showDeleteDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Supprimer tout")
+                    }
+                    
+                    Button(
+                        onClick = {
+                            onGroupDelete(group, false)
+                            showDeleteDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Supprimer le groupe uniquement")
+                    }
+                    
+                    OutlinedButton(
+                        onClick = { showDeleteDialog = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Annuler")
+                    }
+                }
+            },
+            dismissButton = null
+        )
     }
 }

@@ -21,6 +21,9 @@ import com.example.etatdeslieux.ui.components.*
 import com.example.etatdeslieux.utils.ComposeFileProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.io.File
+import android.widget.Toast
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
@@ -48,6 +51,19 @@ fun RoomScreen(
     ) { success ->
         if (success) {
             viewModel.handlePhotoCapture()
+        }
+    }
+
+    // Observer pour la photo en attente de commentaire
+    val pendingPhotoUri by viewModel.pendingPhotoUri.collectAsState()
+    
+    // Observer pour la photo dont le commentaire est en cours d'édition
+    val photoToEdit by viewModel.photoToEdit.collectAsState()
+    
+    // Afficher la boîte de dialogue de commentaire si une photo est en attente
+    LaunchedEffect(pendingPhotoUri) {
+        if (pendingPhotoUri != null) {
+            dialogStates = dialogStates.copy(showPhotoCommentDialog = true)
         }
     }
 
@@ -108,16 +124,73 @@ fun RoomScreen(
                     }
                 }
             } else {
-                PhotoSection(
-                    photos = photos,
-                    onAddPhotoClick = { 
-                        dialogStates = dialogStates.copy(showCameraPermission = true) 
-                    },
-                    onDeletePhoto = { photo -> 
-                        viewModel.deletePhoto(photo) 
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    PhotoSection(
+                        photos = photos,
+                        onAddPhotoClick = { 
+                            dialogStates = dialogStates.copy(showCameraPermission = true) 
+                        },
+                        onDeletePhoto = { photo -> 
+                            viewModel.deletePhoto(photo) 
+                        },
+                        onDownloadPhoto = { photo ->
+                            viewModel.downloadPhoto(photo)
+                        },
+                        onEditComment = { photo ->
+                            viewModel.setPhotoToEdit(photo)
+                            dialogStates = dialogStates.copy(showEditCommentDialog = true)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    // Bouton pour générer le PDF
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Générer un PDF de l'état des lieux",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            
+                            Button(
+                                onClick = {
+                                    val pdfFile = viewModel.generatePdf()
+                                    if (pdfFile != null) {
+                                        Toast.makeText(
+                                            context,
+                                            "PDF généré avec succès: ${pdfFile.name}",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.PictureAsPdf,
+                                    contentDescription = "Générer PDF",
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Générer PDF")
+                            }
+                        }
+                    }
+                }
             }
 
             if (uiState.isLoading) {
@@ -266,12 +339,34 @@ fun RoomScreen(
         CameraPermission(
             onPermissionGranted = {
                 ComposeFileProvider.getImageUri(context).let { uri ->
+                    viewModel.setPhotoUri(uri)
                     cameraLauncher.launch(uri)
                 }
                 dialogStates = dialogStates.copy(showCameraPermission = false)
             },
             onDismiss = {
                 dialogStates = dialogStates.copy(showCameraPermission = false)
+            }
+        )
+    }
+    
+    if (dialogStates.showPhotoCommentDialog) {
+        PhotoCommentDialog(
+            onDismiss = { dialogStates = dialogStates.copy(showPhotoCommentDialog = false) },
+            onConfirm = { comment ->
+                viewModel.addPhotoComment(comment)
+                dialogStates = dialogStates.copy(showPhotoCommentDialog = false)
+            }
+        )
+    }
+
+    if (dialogStates.showEditCommentDialog && photoToEdit != null) {
+        EditCommentDialog(
+            initialComment = photoToEdit!!.comment,
+            onDismiss = { dialogStates = dialogStates.copy(showEditCommentDialog = false) },
+            onConfirm = { comment ->
+                viewModel.updatePhotoComment(comment)
+                dialogStates = dialogStates.copy(showEditCommentDialog = false)
             }
         )
     }
@@ -290,3 +385,89 @@ fun RoomScreen(
     }
 }
 
+@Composable
+private fun PhotoCommentDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var comment by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ajouter un commentaire à la photo") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    label = { Text("Commentaire") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 5
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onConfirm(comment)
+            }) {
+                Text("Enregistrer")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annuler")
+            }
+        }
+    )
+}
+
+@Composable
+private fun EditCommentDialog(
+    initialComment: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var comment by remember { mutableStateOf(initialComment) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Éditer le commentaire de la photo") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    label = { Text("Commentaire") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 5
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onConfirm(comment)
+            }) {
+                Text("Enregistrer")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annuler")
+            }
+        }
+    )
+}

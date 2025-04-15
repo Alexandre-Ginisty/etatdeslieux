@@ -5,9 +5,12 @@ import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -136,24 +139,36 @@ fun HomeScreen(
                 }
 
                 // Afficher les groupes
-                items(uiState.roomGroups) { currentGroup ->
-                    RoomGroupItem(
-                        group = currentGroup,
-                        rooms = uiState.rooms.filter { room -> room.id in currentGroup.roomIds },
-                        onGroupClick = { viewModel.toggleGroupExpanded(currentGroup.id) },
-                        onGroupDelete = { groupToUpdate, deleteRooms ->
-                            if (deleteRooms) {
-                                groupToUpdate.roomIds.forEach { roomId ->
-                                    uiState.rooms.find { it.id == roomId }?.let { room ->
-                                        viewModel.deleteRoom(room)
+                if (uiState.roomGroups.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Groupes",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        )
+                    }
+                    
+                    items(uiState.roomGroups) { currentGroup ->
+                        RoomGroupItem(
+                            group = currentGroup,
+                            rooms = uiState.rooms.filter { room -> room.id in currentGroup.roomIds },
+                            onGroupClick = { viewModel.toggleGroupExpanded(currentGroup.id) },
+                            onGroupDelete = { groupToUpdate, deleteRooms ->
+                                if (deleteRooms) {
+                                    groupToUpdate.roomIds.forEach { roomId ->
+                                        uiState.rooms.find { it.id == roomId }?.let { room ->
+                                            viewModel.deleteRoom(room)
+                                        }
                                     }
                                 }
-                            }
-                            viewModel.deleteGroup(groupToUpdate, deleteRooms)
-                        },
-                        onRoomClick = { room -> onNavigateToRoom(room.id) },
-                        onRoomDelete = { room -> viewModel.deleteRoom(room) }
-                    )
+                                viewModel.deleteGroup(groupToUpdate, deleteRooms)
+                            },
+                            onRoomClick = { room -> onNavigateToRoom(room.id) },
+                            onRoomDelete = { room -> viewModel.deleteRoom(room) },
+                            onRemoveRoomFromGroup = { groupId, roomId -> viewModel.removeRoomFromGroup(roomId, groupId) },
+                            modifier = Modifier.padding(bottom = 16.dp) // Espacement entre les groupes
+                        )
+                    }
                 }
             }
 
@@ -272,7 +287,11 @@ fun HomeScreen(
                     onDismissRequest = { showAddGroupDialog = false },
                     title = { Text("Nouveau groupe") },
                     text = {
-                        Column {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                        ) {
                             TextField(
                                 value = newGroupName,
                                 onValueChange = { newGroupName = it },
@@ -288,10 +307,12 @@ fun HomeScreen(
                                 modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                             )
 
-                            LazyColumn(
-                                modifier = Modifier.heightIn(max = 200.dp)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 200.dp)
                             ) {
-                                items(uiState.rooms) { room ->
+                                uiState.rooms.forEach { room ->
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -342,6 +363,122 @@ fun HomeScreen(
             if (showSettingsDialog) {
                 SettingsDialog(
                     onDismiss = { showSettingsDialog = false }
+                )
+            }
+
+            if (showFilterDialog) {
+                AlertDialog(
+                    onDismissRequest = { showFilterDialog = false },
+                    title = { Text("Trier par") },
+                    text = {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Option de tri par nom (A-Z)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.setSortOption(SortOption.NAME_ASC)
+                                        showFilterDialog = false
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = uiState.sortOption == SortOption.NAME_ASC,
+                                    onClick = {
+                                        viewModel.setSortOption(SortOption.NAME_ASC)
+                                        showFilterDialog = false
+                                    }
+                                )
+                                Text(
+                                    text = "Nom (A-Z)",
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+
+                            // Option de tri par nom (Z-A)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.setSortOption(SortOption.NAME_DESC)
+                                        showFilterDialog = false
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = uiState.sortOption == SortOption.NAME_DESC,
+                                    onClick = {
+                                        viewModel.setSortOption(SortOption.NAME_DESC)
+                                        showFilterDialog = false
+                                    }
+                                )
+                                Text(
+                                    text = "Nom (Z-A)",
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+
+                            // Option de tri par date (Plus récent)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.setSortOption(SortOption.DATE_DESC)
+                                        showFilterDialog = false
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = uiState.sortOption == SortOption.DATE_DESC,
+                                    onClick = {
+                                        viewModel.setSortOption(SortOption.DATE_DESC)
+                                        showFilterDialog = false
+                                    }
+                                )
+                                Text(
+                                    text = "Date (Plus récent)",
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+
+                            // Option de tri par date (Plus ancien)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.setSortOption(SortOption.DATE_ASC)
+                                        showFilterDialog = false
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = uiState.sortOption == SortOption.DATE_ASC,
+                                    onClick = {
+                                        viewModel.setSortOption(SortOption.DATE_ASC)
+                                        showFilterDialog = false
+                                    }
+                                )
+                                Text(
+                                    text = "Date (Plus ancien)",
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showFilterDialog = false }) {
+                            Text("Fermer")
+                        }
+                    }
                 )
             }
         }

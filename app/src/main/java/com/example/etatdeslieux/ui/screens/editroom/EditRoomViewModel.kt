@@ -25,9 +25,6 @@ class EditRoomViewModel @Inject constructor(
     private val _description = MutableStateFlow("")
     val description = _description.asStateFlow()
 
-    private val _size = MutableStateFlow("")
-    val size = _size.asStateFlow()
-
     private val _floor = MutableStateFlow("")
     val floor = _floor.asStateFlow()
 
@@ -40,7 +37,6 @@ class EditRoomViewModel @Inject constructor(
                 room?.let {
                     _name.value = it.name
                     _description.value = it.description
-                    _size.value = it.size.toString()
                     _floor.value = it.floor.toString()
                     _etatType.value = it.etatType
                 }
@@ -54,10 +50,6 @@ class EditRoomViewModel @Inject constructor(
 
     fun updateDescription(description: String) {
         _description.value = description
-    }
-
-    fun updateSize(size: String) {
-        _size.value = size
     }
 
     fun updateFloor(floor: String) {
@@ -75,7 +67,6 @@ class EditRoomViewModel @Inject constructor(
                 val updatedRoom = it.copy(
                     name = name.value,
                     description = description.value,
-                    size = size.value.toFloatOrNull() ?: 0f,
                     floor = floor.value.toIntOrNull() ?: 0,
                     etatType = etatType.value
                 )

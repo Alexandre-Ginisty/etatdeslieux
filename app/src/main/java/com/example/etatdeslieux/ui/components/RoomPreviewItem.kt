@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.etatdeslieux.model.Room
 import com.example.etatdeslieux.model.RoomGroup
+import com.example.etatdeslieux.utils.DateFormatter
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -71,6 +72,15 @@ fun RoomPreviewItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (!isInGroup) {
+                    Text(
+                        text = "Créé le ${DateFormatter.formatLocalDateTime(room.createdAt)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
 

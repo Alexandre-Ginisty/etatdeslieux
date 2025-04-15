@@ -65,34 +65,19 @@ fun AddRoomScreen(
             )
 
             OutlinedTextField(
-    value = viewModel.size,
-    onValueChange = { newValue ->
-        // N'accepte que les chiffres
-        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
-            viewModel.updateSize(newValue)
-        }
-    },
-    label = { Text("Taille (m²)") },
-    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-    modifier = Modifier
-        .fillMaxWidth()
-        .padding(vertical = 8.dp)
-)
-
-OutlinedTextField(
-    value = viewModel.floor,
-    onValueChange = { newValue ->
-        // N'accepte que les chiffres
-        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
-            viewModel.updateFloor(newValue)
-        }
-    },
-    label = { Text("Étage") },
-    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-    modifier = Modifier
-        .fillMaxWidth()
-        .padding(vertical = 8.dp)
-)
+                value = viewModel.floor,
+                onValueChange = { newValue ->
+                    // N'accepte que les chiffres
+                    if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                        viewModel.updateFloor(newValue)
+                    }
+                },
+                label = { Text("Étage") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            )
 
             OutlinedTextField(
                 value = viewModel.creator,

@@ -53,6 +53,7 @@ dependencies {
     implementation libs.androidx.datastore.core.android
     implementation "androidx.datastore:datastore-preferences:1.0.0"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1"
+    implementation libs.constraintlayout
     def room_version = "2.6.1"
     def nav_version = "2.7.6"
 
@@ -99,7 +100,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'
 
     // PDF Generation
-    implementation 'com.itextpdf:itext7-core:7.2.5'
+    // Suppression des dépendances iText qui causent des problèmes
 
     // Animations
     implementation "androidx.compose.animation:animation:1.5.4"

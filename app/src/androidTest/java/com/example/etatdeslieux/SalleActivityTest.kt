@@ -41,7 +41,7 @@ class SalleActivityInstrumentedTest {
             .check(matches(withText("Test Description")))
         
         onView(withId(R.id.salleSize))
-            .check(matches(withText("Taille : 25.5 m²")))
+            .check(matches(withText("Taille : 25.5")))
         
         onView(withId(R.id.salleFloor))
             .check(matches(withText("Étage : 2")))

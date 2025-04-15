@@ -6,9 +6,13 @@ import android.os.Parcelable
 data class DialogStates(
     val showDeleteDialog: Boolean = false,
     val showEditDialog: Boolean = false,
-    val showCameraPermission: Boolean = false
+    val showCameraPermission: Boolean = false,
+    val showPhotoCommentDialog: Boolean = false,
+    val showEditCommentDialog: Boolean = false
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
+        parcel.readByte() != 0.toByte(),
+        parcel.readByte() != 0.toByte(),
         parcel.readByte() != 0.toByte(),
         parcel.readByte() != 0.toByte(),
         parcel.readByte() != 0.toByte()
@@ -18,6 +22,8 @@ data class DialogStates(
         parcel.writeByte(if (showDeleteDialog) 1 else 0)
         parcel.writeByte(if (showEditDialog) 1 else 0)
         parcel.writeByte(if (showCameraPermission) 1 else 0)
+        parcel.writeByte(if (showPhotoCommentDialog) 1 else 0)
+        parcel.writeByte(if (showEditCommentDialog) 1 else 0)
     }
 
     override fun describeContents(): Int {

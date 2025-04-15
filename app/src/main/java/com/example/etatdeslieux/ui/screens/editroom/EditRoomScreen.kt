@@ -21,7 +21,6 @@ fun EditRoomScreen(
 ) {
     val name by viewModel.name.collectAsState()
     val description by viewModel.description.collectAsState()
-    val size by viewModel.size.collectAsState()
     val floor by viewModel.floor.collectAsState()
     val etatType by viewModel.etatType.collectAsState()
 
@@ -136,21 +135,16 @@ fun EditRoomScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
-                        value = size,
-                        onValueChange = { viewModel.updateSize(it) },
-                        label = { Text("Superficie (m²)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
                         value = floor,
                         onValueChange = { viewModel.updateFloor(it) },
                         label = { Text("Étage") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Dropdown pour le type d'état des lieux
                 }
             }
         }

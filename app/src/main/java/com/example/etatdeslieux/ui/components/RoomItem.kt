@@ -51,11 +51,11 @@ fun RoomItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Taille: ${room.size} m²",
+                    text = "Étage: ${room.floor}",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = "Étage: ${room.floor}",
+                    text = "Type: ${room.etatType}",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -64,10 +64,6 @@ fun RoomItem(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "Type: ${room.etatType}",
-                    style = MaterialTheme.typography.bodySmall
-                )
                 Text(
                     text = "Par: ${room.creator}",
                     style = MaterialTheme.typography.bodySmall

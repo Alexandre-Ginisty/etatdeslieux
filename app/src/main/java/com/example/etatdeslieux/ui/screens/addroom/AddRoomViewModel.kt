@@ -29,9 +29,6 @@ class AddRoomViewModel @Inject constructor(
     var description by mutableStateOf("")
         private set
 
-    var size by mutableStateOf("")
-        private set
-
     var floor by mutableStateOf("")
         private set
 
@@ -47,10 +44,6 @@ class AddRoomViewModel @Inject constructor(
 
     fun updateDescription(newDescription: String) {
         description = newDescription
-    }
-
-    fun updateSize(newSize: String) {
-        size = newSize
     }
 
     fun updateFloor(newFloor: String) {
@@ -71,7 +64,7 @@ class AddRoomViewModel @Inject constructor(
                 val room = Room(
                     name = name,
                     description = description,
-                    size = size.toFloatOrNull() ?: 0f,
+                    size = 0f, // Valeur par défaut pour la taille
                     floor = floor.toIntOrNull() ?: 0,
                     creator = creator,
                     etatType = etatType.name,
