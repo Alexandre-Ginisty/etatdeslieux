@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">État des Lieux</string>
+    <string name="add_room">Ajouter une pièce</string>
+    <string name="room_name">Nom de la pièce</string>
+    <string name="room_description">Description</string>
+    <string name="room_size">Taille (m²)</string>
+    <string name="room_floor">Étage</string>
+    <string name="room_creator">Créateur</string>
+    <string name="room_type">Type d\'état des lieux</string>
+    <string name="save">Enregistrer</string>
+    <string name="error_required">Ce champ est requis</string>
+    <string name="error_invalid_size">La taille doit être un nombre positif</string>
+    <string name="error_invalid_floor">L\'étage doit être un nombre valide</string>
+
+    <!-- Ajouter les options pour le Spinner -->
+    <string-array name="etat_des_lieux_options">
+        <item>Entrée</item>
+        <item>Sortie</item>
+        <item>Pré-état des lieux</item>
+        <item>Intermédiaire</item>
+    </string-array>
+</resources>

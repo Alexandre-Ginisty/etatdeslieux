@@ -1,0 +1,349 @@
+package com.example.etatdeslieux.ui.screens.home
+
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.etatdeslieux.R
+import com.example.etatdeslieux.ui.components.RoomGroupItem
+import com.example.etatdeslieux.ui.components.RoomPreviewItem
+import com.example.etatdeslieux.ui.components.SettingsDialog
+
+@RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    onNavigateToRoom: (Long) -> Unit,
+    onNavigateToAddRoom: () -> Unit,
+    onNavigateToPortal: () -> Unit,
+    viewModel: HomeViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    var showCreateMenu by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    var showAddGroupDialog by remember { mutableStateOf(false) }
+    var selectedRoomIds by remember { mutableStateOf(emptySet<Long>()) }
+    var newGroupName by remember { mutableStateOf("") }
+    var showFilterDialog by remember { mutableStateOf(false) }
+    var showSearchDialog by remember { mutableStateOf(false) }
+
+    val rotationAnimation by animateFloatAsState(
+        targetValue = if (showCreateMenu) 45f else 0f,
+        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        label = "FAB rotation"
+    )
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = "État des Lieux",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateToPortal) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "Retour au portail",
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                },
+                actions = {
+                    Image(
+                        painter = painterResource(id = R.mipmap.ic_launcher_adaptive_fore),
+                        contentDescription = "Logo de l'application",
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .size(48.dp)
+                    )
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                // Afficher les pièces non groupées
+                val ungroupedRooms = uiState.rooms.filter { currentRoom ->
+                    uiState.roomGroups.none { existingGroup -> currentRoom.id in existingGroup.roomIds }
+                }
+
+                if (ungroupedRooms.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Pièces non groupées",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+
+                    items(ungroupedRooms) { ungroupedRoom ->
+                        RoomPreviewItem(
+                            room = ungroupedRoom,
+                            onClick = { onNavigateToRoom(ungroupedRoom.id) },
+                            onDelete = { viewModel.deleteRoom(ungroupedRoom) },
+                            onAddToGroup = { roomToMove ->
+                                val availableGroups = uiState.roomGroups.filter { targetGroup ->
+                                    !targetGroup.roomIds.contains(roomToMove.id)
+                                }
+                                if (availableGroups.isNotEmpty()) {
+                                    availableGroups.firstOrNull()?.let { targetGroup ->
+                                        viewModel.addRoomToGroup(roomToMove.id, targetGroup.id)
+                                    }
+                                }
+                            },
+                            availableGroups = uiState.roomGroups.filter { targetGroup ->
+                                !targetGroup.roomIds.contains(ungroupedRoom.id)
+                            }
+                        )
+                    }
+                }
+
+                // Afficher les groupes
+                items(uiState.roomGroups) { currentGroup ->
+                    RoomGroupItem(
+                        group = currentGroup,
+                        rooms = uiState.rooms.filter { room -> room.id in currentGroup.roomIds },
+                        onGroupClick = { viewModel.toggleGroupExpanded(currentGroup.id) },
+                        onGroupDelete = { groupToUpdate, deleteRooms ->
+                            if (deleteRooms) {
+                                groupToUpdate.roomIds.forEach { roomId ->
+                                    uiState.rooms.find { it.id == roomId }?.let { room ->
+                                        viewModel.deleteRoom(room)
+                                    }
+                                }
+                            }
+                            viewModel.deleteGroup(groupToUpdate, deleteRooms)
+                        },
+                        onRoomClick = { room -> onNavigateToRoom(room.id) },
+                        onRoomDelete = { room -> viewModel.deleteRoom(room) }
+                    )
+                }
+            }
+
+            // Barre de boutons en bas
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Bouton des paramètres
+                FloatingActionButton(
+                    onClick = { showSettingsDialog = true },
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Paramètres"
+                    )
+                }
+
+                // Bouton filtre
+                FloatingActionButton(
+                    onClick = { showFilterDialog = true },
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FilterList,
+                        contentDescription = "Filtrer"
+                    )
+                }
+
+                // Bouton recherche
+                FloatingActionButton(
+                    onClick = { showSearchDialog = true },
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Rechercher"
+                    )
+                }
+
+                // Bouton principal
+                FloatingActionButton(
+                    onClick = { showCreateMenu = !showCreateMenu },
+                    modifier = Modifier.rotate(rotationAnimation),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Créer"
+                    )
+                }
+            }
+
+            if (showCreateMenu) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = 88.dp),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FloatingActionButton(
+                        onClick = {
+                            showCreateMenu = false
+                            showAddGroupDialog = true
+                        },
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FolderOpen,
+                                contentDescription = "Créer un groupe"
+                            )
+                            Text("Groupe")
+                        }
+                    }
+
+                    FloatingActionButton(
+                        onClick = {
+                            showCreateMenu = false
+                            onNavigateToAddRoom()
+                        },
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = "Créer une pièce"
+                            )
+                            Text("Pièce")
+                        }
+                    }
+                }
+            }
+
+            if (showAddGroupDialog) {
+                AlertDialog(
+                    onDismissRequest = { showAddGroupDialog = false },
+                    title = { Text("Nouveau groupe") },
+                    text = {
+                        Column {
+                            TextField(
+                                value = newGroupName,
+                                onValueChange = { newGroupName = it },
+                                label = { Text("Nom du groupe") },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                            )
+
+                            Text(
+                                text = "Sélectionner les pièces",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                            )
+
+                            LazyColumn(
+                                modifier = Modifier.heightIn(max = 200.dp)
+                            ) {
+                                items(uiState.rooms) { room ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Checkbox(
+                                            checked = selectedRoomIds.contains(room.id),
+                                            onCheckedChange = { checked ->
+                                                selectedRoomIds = if (checked) {
+                                                    selectedRoomIds + room.id
+                                                } else {
+                                                    selectedRoomIds - room.id
+                                                }
+                                            }
+                                        )
+                                        Text(
+                                            text = room.name,
+                                            modifier = Modifier.padding(start = 8.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                if (newGroupName.isNotBlank()) {
+                                    viewModel.createRoomGroup(newGroupName, selectedRoomIds)
+                                    newGroupName = ""
+                                    selectedRoomIds = emptySet()
+                                    showAddGroupDialog = false
+                                }
+                            }
+                        ) {
+                            Text("Créer")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showAddGroupDialog = false }) {
+                            Text("Annuler")
+                        }
+                    }
+                )
+            }
+
+            if (showSettingsDialog) {
+                SettingsDialog(
+                    onDismiss = { showSettingsDialog = false }
+                )
+            }
+        }
+    }
+}

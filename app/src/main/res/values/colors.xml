@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Couleurs principales -->
+    <color name="fr_blue">#000091</color>
+    <color name="fr_blue_light">#E3E3FD</color>
+    <color name="fr_red">#E1000F</color>
+    <color name="fr_white">#FFFFFF</color>
+    <color name="fr_black">#000000</color>
+    
+    <!-- Couleurs secondaires -->
+    <color name="fr_grey">#666666</color>
+    <color name="fr_grey_light">#E5E5E5</color>
+    <color name="fr_blue_france_hover">#1212FF</color>
+    <color name="fr_blue_france_active">#2323FF</color>
+</resources>
