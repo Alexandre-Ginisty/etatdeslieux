@@ -15,6 +15,8 @@ import android.util.Log
 import android.widget.Toast
 import com.example.etatdeslieux.model.Photo
 import com.example.etatdeslieux.model.Room
+import com.example.etatdeslieux.model.Item
+import com.example.etatdeslieux.model.ItemCondition
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -49,9 +51,10 @@ class PdfGenerator(private val context: Context) {
      * Génère un PDF pour un état des lieux
      * @param room La salle pour laquelle générer le PDF
      * @param photos Liste des photos associées à la salle
+     * @param items Liste des objets associés à la salle
      * @return Le fichier PDF généré ou null en cas d'erreur
      */
-    fun generateRoomPdf(room: Room, photos: List<Photo>): File? {
+    fun generateRoomPdf(room: Room, photos: List<Photo>, items: List<Item> = emptyList()): File? {
         return try {
             // Créer le répertoire de destination
             val pdfDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
@@ -69,6 +72,11 @@ class PdfGenerator(private val context: Context) {
             
             // Ajouter la première page avec les informations de la salle
             addRoomInfoPage(document, room)
+            
+            // Ajouter une page avec les objets si la liste n'est pas vide
+            if (items.isNotEmpty()) {
+                addItemsPage(document, items)
+            }
             
             // Ajouter des pages pour les photos (4 photos par page maximum)
             if (photos.isNotEmpty()) {
@@ -207,6 +215,284 @@ class PdfGenerator(private val context: Context) {
     }
     
     /**
+     * Ajoute une page avec les objets
+     */
+    private fun addItemsPage(document: PdfDocument, items: List<Item>) {
+        // Créer une page
+        val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 2).create()
+        var page = document.startPage(pageInfo)
+        var canvas = page.canvas
+        
+        // Peinture pour le texte
+        val paint = Paint()
+        paint.color = colorBlack
+        
+        // Titre
+        var yPosition = margin + lineHeight
+        paint.textSize = titleTextSize
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        val title = "Inventaire des Objets"
+        val titleWidth = paint.measureText(title)
+        canvas.drawText(title, (pageWidth - titleWidth) / 2, yPosition, paint)
+        
+        // Tableau d'objets
+        yPosition += lineHeight * 2
+        paint.textSize = subtitleTextSize
+        canvas.drawText("Liste des objets présents dans la pièce", margin.toFloat(), yPosition, paint)
+        
+        // Dessiner le tableau
+        yPosition += lineHeight
+        val tableStartY = yPosition
+        
+        // Définir les largeurs des colonnes
+        val colWidth1 = (pageWidth - 2 * margin) * 0.30f  // Nom
+        val colWidth2 = (pageWidth - 2 * margin) * 0.10f  // Quantité
+        val colWidth3 = (pageWidth - 2 * margin) * 0.20f  // État
+        val colWidth4 = (pageWidth - 2 * margin) * 0.40f  // Commentaire
+        
+        // En-têtes du tableau
+        paint.color = colorGray
+        val headerRect = Rect(
+            margin,
+            tableStartY.toInt(),
+            (margin + colWidth1 + colWidth2 + colWidth3 + colWidth4).toInt(),
+            (tableStartY + lineHeight).toInt()
+        )
+        canvas.drawRect(headerRect, paint)
+        
+        // Lignes verticales du tableau (en-tête)
+        paint.color = Color.WHITE
+        paint.strokeWidth = 1f
+        canvas.drawLine(
+            margin + colWidth1,
+            tableStartY,
+            margin + colWidth1,
+            tableStartY + lineHeight,
+            paint
+        )
+        canvas.drawLine(
+            margin + colWidth1 + colWidth2,
+            tableStartY,
+            margin + colWidth1 + colWidth2,
+            tableStartY + lineHeight,
+            paint
+        )
+        canvas.drawLine(
+            margin + colWidth1 + colWidth2 + colWidth3,
+            tableStartY,
+            margin + colWidth1 + colWidth2 + colWidth3,
+            tableStartY + lineHeight,
+            paint
+        )
+        
+        // Texte des en-têtes
+        paint.color = Color.WHITE
+        paint.textSize = normalTextSize
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        canvas.drawText("Nom", margin + cellPadding, tableStartY + lineHeight - cellPadding, paint)
+        canvas.drawText("Qté", margin + colWidth1 + cellPadding, tableStartY + lineHeight - cellPadding, paint)
+        canvas.drawText("État", margin + colWidth1 + colWidth2 + cellPadding, tableStartY + lineHeight - cellPadding, paint)
+        canvas.drawText("Commentaire", margin + colWidth1 + colWidth2 + colWidth3 + cellPadding, tableStartY + lineHeight - cellPadding, paint)
+        
+        // Lignes du tableau
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        var rowY = tableStartY + lineHeight
+        
+        // Couleurs pour les états
+        val stateColors = mapOf(
+            "Mauvais" to Color.rgb(255, 87, 34),  // Orange foncé
+            "Bon" to Color.rgb(33, 150, 243),     // Bleu
+            "Très Bon" to Color.rgb(76, 175, 80), // Vert
+            "Neuf" to Color.rgb(156, 39, 176)     // Violet
+        )
+        
+        if (items.isEmpty()) {
+            // Afficher un message si aucun objet n'est présent
+            paint.color = colorBlack
+            paint.textSize = normalTextSize
+            paint.textAlign = Paint.Align.CENTER
+            canvas.drawText(
+                "Aucun objet enregistré pour cette pièce",
+                pageWidth / 2f,
+                rowY + lineHeight * 2,
+                paint
+            )
+            paint.textAlign = Paint.Align.LEFT
+        } else {
+            items.forEachIndexed { index, item ->
+                // Alterner les couleurs de fond
+                if (index % 2 == 0) {
+                    paint.color = colorLightGray
+                    canvas.drawRect(
+                        margin.toFloat(),
+                        rowY,
+                        margin + colWidth1 + colWidth2 + colWidth3 + colWidth4,
+                        rowY + lineHeight * 1.5f,
+                        paint
+                    )
+                }
+                
+                // Bordures des cellules
+                paint.color = colorGray
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = 0.5f
+                
+                // Lignes horizontales
+                canvas.drawLine(
+                    margin.toFloat(),
+                    rowY,
+                    margin + colWidth1 + colWidth2 + colWidth3 + colWidth4,
+                    rowY,
+                    paint
+                )
+                
+                // Lignes verticales
+                canvas.drawLine(
+                    margin + colWidth1,
+                    rowY,
+                    margin + colWidth1,
+                    rowY + lineHeight * 1.5f,
+                    paint
+                )
+                canvas.drawLine(
+                    margin + colWidth1 + colWidth2,
+                    rowY,
+                    margin + colWidth1 + colWidth2,
+                    rowY + lineHeight * 1.5f,
+                    paint
+                )
+                canvas.drawLine(
+                    margin + colWidth1 + colWidth2 + colWidth3,
+                    rowY,
+                    margin + colWidth1 + colWidth2 + colWidth3,
+                    rowY + lineHeight * 1.5f,
+                    paint
+                )
+                
+                // Contenu des cellules
+                paint.color = colorBlack
+                paint.style = Paint.Style.FILL
+                
+                // Nom
+                canvas.drawText(item.name, margin + cellPadding, rowY + lineHeight - cellPadding, paint)
+                
+                // Quantité
+                canvas.drawText(item.quantity.toString(), margin + colWidth1 + cellPadding, rowY + lineHeight - cellPadding, paint)
+                
+                // État (avec couleur)
+                paint.color = stateColors[item.condition] ?: colorBlack
+                paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                canvas.drawText(item.condition, margin + colWidth1 + colWidth2 + cellPadding, rowY + lineHeight - cellPadding, paint)
+                paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                paint.color = colorBlack
+                
+                // Commentaire (avec gestion des retours à la ligne)
+                if (item.comment.isNotEmpty()) {
+                    val maxTextWidth = colWidth4 - 2 * cellPadding
+                    val words = item.comment.split(" ")
+                    var line = ""
+                    var lineY = rowY + lineHeight - cellPadding
+                    
+                    for (word in words) {
+                        val testLine = if (line.isEmpty()) word else "$line $word"
+                        if (paint.measureText(testLine) <= maxTextWidth) {
+                            line = testLine
+                        } else {
+                            canvas.drawText(line, margin + colWidth1 + colWidth2 + colWidth3 + cellPadding, lineY, paint)
+                            lineY += lineHeight / 2
+                            line = word
+                        }
+                    }
+                    
+                    if (line.isNotEmpty()) {
+                        canvas.drawText(line, margin + colWidth1 + colWidth2 + colWidth3 + cellPadding, lineY, paint)
+                    }
+                }
+                
+                // Passer à la ligne suivante
+                rowY += lineHeight * 1.5f
+                
+                // Vérifier si on atteint la fin de la page
+                if (rowY > pageHeight - margin) {
+                    // Finaliser la page actuelle
+                    document.finishPage(page)
+                    
+                    // Créer une nouvelle page
+                    val newPageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, document.pages.size + 1).create()
+                    val newPage = document.startPage(newPageInfo)
+                    val newCanvas = newPage.canvas
+                    
+                    // Réinitialiser les variables
+                    paint.color = colorBlack
+                    paint.textSize = subtitleTextSize
+                    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                    
+                    // Titre de continuation
+                    yPosition = margin + lineHeight
+                    val continuationTitle = "Inventaire des Objets (suite)"
+                    val continuationTitleWidth = paint.measureText(continuationTitle)
+                    newCanvas.drawText(continuationTitle, (pageWidth - continuationTitleWidth) / 2, yPosition, paint)
+                    
+                    // Réinitialiser le tableau
+                    yPosition += lineHeight * 2
+                    val newTableStartY = yPosition
+                    
+                    // En-têtes du tableau
+                    paint.color = colorGray
+                    val newHeaderRect = Rect(
+                        margin,
+                        newTableStartY.toInt(),
+                        (margin + colWidth1 + colWidth2 + colWidth3 + colWidth4).toInt(),
+                        (newTableStartY + lineHeight).toInt()
+                    )
+                    newCanvas.drawRect(newHeaderRect, paint)
+                    
+                    // Lignes verticales du tableau (en-tête)
+                    paint.color = Color.WHITE
+                    paint.strokeWidth = 1f
+                    newCanvas.drawLine(
+                        margin + colWidth1,
+                        newTableStartY,
+                        margin + colWidth1,
+                        newTableStartY + lineHeight,
+                        paint
+                    )
+                    newCanvas.drawLine(
+                        margin + colWidth1 + colWidth2,
+                        newTableStartY,
+                        margin + colWidth1 + colWidth2,
+                        newTableStartY + lineHeight,
+                        paint
+                    )
+                    newCanvas.drawLine(
+                        margin + colWidth1 + colWidth2 + colWidth3,
+                        newTableStartY,
+                        margin + colWidth1 + colWidth2 + colWidth3,
+                        newTableStartY + lineHeight,
+                        paint
+                    )
+                    
+                    // Texte des en-têtes
+                    paint.color = Color.WHITE
+                    paint.textSize = normalTextSize
+                    newCanvas.drawText("Nom", margin + cellPadding, newTableStartY + lineHeight - cellPadding, paint)
+                    newCanvas.drawText("Qté", margin + colWidth1 + cellPadding, newTableStartY + lineHeight - cellPadding, paint)
+                    newCanvas.drawText("État", margin + colWidth1 + colWidth2 + cellPadding, newTableStartY + lineHeight - cellPadding, paint)
+                    newCanvas.drawText("Commentaire", margin + colWidth1 + colWidth2 + colWidth3 + cellPadding, newTableStartY + lineHeight - cellPadding, paint)
+                    
+                    // Mettre à jour les variables pour la nouvelle page
+                    canvas = newCanvas
+                    rowY = newTableStartY + lineHeight
+                    page = newPage
+                }
+            }
+        }
+        
+        // Finaliser la page
+        document.finishPage(page)
+    }
+    
+    /**
      * Ajoute des pages avec les photos (4 photos par page maximum)
      */
     private fun addPhotoPages(document: PdfDocument, photos: List<Photo>) {
@@ -290,8 +576,13 @@ class PdfGenerator(private val context: Context) {
                 } else {
                     // Dessiner un rectangle avec un message d'erreur
                     paint.color = Color.LTGRAY
-                    canvas.drawRect(x.toFloat(), y,
-                        (x + photoWidth).toFloat(), y + photoHeight, paint)
+                    canvas.drawRect(
+                        x.toFloat(),
+                        y,
+                        (x + photoWidth).toFloat(),
+                        y + photoHeight,
+                        paint
+                    )
                     
                     paint.color = Color.RED
                     paint.textSize = normalTextSize

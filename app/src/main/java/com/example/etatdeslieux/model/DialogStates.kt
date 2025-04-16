@@ -8,9 +8,15 @@ data class DialogStates(
     val showEditDialog: Boolean = false,
     val showCameraPermission: Boolean = false,
     val showPhotoCommentDialog: Boolean = false,
-    val showEditCommentDialog: Boolean = false
+    val showEditCommentDialog: Boolean = false,
+    val showAddItemDialog: Boolean = false,
+    val showEditItemDialog: Boolean = false,
+    val showDeleteItemDialog: Boolean = false
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
+        parcel.readByte() != 0.toByte(),
+        parcel.readByte() != 0.toByte(),
+        parcel.readByte() != 0.toByte(),
         parcel.readByte() != 0.toByte(),
         parcel.readByte() != 0.toByte(),
         parcel.readByte() != 0.toByte(),
@@ -24,6 +30,9 @@ data class DialogStates(
         parcel.writeByte(if (showCameraPermission) 1 else 0)
         parcel.writeByte(if (showPhotoCommentDialog) 1 else 0)
         parcel.writeByte(if (showEditCommentDialog) 1 else 0)
+        parcel.writeByte(if (showAddItemDialog) 1 else 0)
+        parcel.writeByte(if (showEditItemDialog) 1 else 0)
+        parcel.writeByte(if (showDeleteItemDialog) 1 else 0)
     }
 
     override fun describeContents(): Int {

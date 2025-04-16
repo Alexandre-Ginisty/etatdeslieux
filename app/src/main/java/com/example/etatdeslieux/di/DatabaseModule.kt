@@ -3,9 +3,11 @@ package com.example.etatdeslieux.di
 import android.content.Context
 import androidx.room.Room
 import com.example.etatdeslieux.data.AppDatabase
+import com.example.etatdeslieux.data.dao.ItemDao
 import com.example.etatdeslieux.data.dao.PhotoDao
 import com.example.etatdeslieux.data.dao.RoomDao
 import com.example.etatdeslieux.data.dao.RoomGroupDao
+import com.example.etatdeslieux.data.repository.ItemRepository
 import com.example.etatdeslieux.data.repository.PhotoRepository
 import com.example.etatdeslieux.data.repository.RoomRepository
 import com.example.etatdeslieux.data.repository.RoomGroupRepository
@@ -42,6 +44,9 @@ object DatabaseModule {
 
     @Provides
     fun provideRoomGroupDao(database: AppDatabase) = database.roomGroupDao()
+    
+    @Provides
+    fun provideItemDao(database: AppDatabase) = database.itemDao()
 
     @Singleton
     @Provides
@@ -59,5 +64,11 @@ object DatabaseModule {
     @Provides
     fun provideRoomGroupRepository(roomGroupDao: RoomGroupDao): RoomGroupRepository {
         return RoomGroupRepository(roomGroupDao)
+    }
+    
+    @Singleton
+    @Provides
+    fun provideItemRepository(itemDao: ItemDao): ItemRepository {
+        return ItemRepository(itemDao)
     }
 }

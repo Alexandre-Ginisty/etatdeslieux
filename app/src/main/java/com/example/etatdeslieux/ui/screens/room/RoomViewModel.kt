@@ -8,8 +8,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.etatdeslieux.data.repository.PhotoRepository
 import com.example.etatdeslieux.data.repository.RoomRepository
+import com.example.etatdeslieux.data.repository.ItemRepository
 import com.example.etatdeslieux.model.Photo
 import com.example.etatdeslieux.model.Room
+import com.example.etatdeslieux.model.Item
 import com.example.etatdeslieux.utils.PhotoStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -32,6 +34,7 @@ class RoomViewModel @Inject constructor(
     private val roomRepository: RoomRepository,
     private val photoRepository: PhotoRepository,
     private val photoStorage: PhotoStorage,
+    private val itemRepository: ItemRepository,
     @ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -44,6 +47,9 @@ class RoomViewModel @Inject constructor(
     private val _photos = MutableStateFlow<List<Photo>>(emptyList())
     val photos: StateFlow<List<Photo>> = _photos.asStateFlow()
 
+    private val _items = MutableStateFlow<List<Item>>(emptyList())
+    val items: StateFlow<List<Item>> = _items.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -51,6 +57,7 @@ class RoomViewModel @Inject constructor(
         val isLoading: Boolean = false,
         val room: Room? = null,
         val photos: List<Photo> = emptyList(),
+        val items: List<Item> = emptyList(),
         val error: String? = null,
     )
 
@@ -68,6 +75,14 @@ class RoomViewModel @Inject constructor(
     private val _photoToEdit = MutableStateFlow<Photo?>(null)
     val photoToEdit: StateFlow<Photo?> = _photoToEdit.asStateFlow()
 
+    // État pour l'objet à éditer
+    private val _itemToEdit = MutableStateFlow<Item?>(null)
+    val itemToEdit: StateFlow<Item?> = _itemToEdit.asStateFlow()
+
+    // État pour l'objet à supprimer
+    private val _itemToDelete = MutableStateFlow<Item?>(null)
+    val itemToDelete: StateFlow<Item?> = _itemToDelete.asStateFlow()
+
     init {
         if (roomId != 0L) {
             loadRoomData()
@@ -82,11 +97,13 @@ class RoomViewModel @Inject constructor(
             
             combine(
                 roomRepository.getRoomById(roomId),
-                photoRepository.getPhotosByRoomId(roomId)
-            ) { room, photos ->
+                photoRepository.getPhotosByRoomId(roomId),
+                itemRepository.getItemsByRoomId(roomId)
+            ) { room, photos, items ->
                 RoomUiState(
                     room = room,
                     photos = photos,
+                    items = items,
                     isLoading = false
                 )
             }.catch { e ->
@@ -427,12 +444,13 @@ class RoomViewModel @Inject constructor(
     fun generatePdf(): File? {
         val room = _uiState.value.room ?: return null
         val photos = _uiState.value.photos
+        val items = _uiState.value.items
 
         _uiState.value = _uiState.value.copy(isLoading = true)
 
         return try {
             val pdfGenerator = com.example.etatdeslieux.utils.PdfGenerator(context)
-            val pdfFile = pdfGenerator.generateRoomPdf(room, photos)
+            val pdfFile = pdfGenerator.generateRoomPdf(room, photos, items)
             
             if (pdfFile != null) {
                 Log.d("RoomViewModel", "PDF généré avec succès: ${pdfFile.absolutePath}")
@@ -483,6 +501,34 @@ class RoomViewModel @Inject constructor(
     }
     
     /**
+     * Définit l'objet à éditer
+     */
+    fun setItemToEdit(item: Item) {
+        _itemToEdit.value = item
+    }
+    
+    /**
+     * Définit l'objet à supprimer
+     */
+    fun setItemToDelete(item: Item) {
+        _itemToDelete.value = item
+    }
+    
+    /**
+     * Efface l'objet à éditer
+     */
+    fun clearItemToEdit() {
+        _itemToEdit.value = null
+    }
+    
+    /**
+     * Efface l'objet à supprimer
+     */
+    fun clearItemToDelete() {
+        _itemToDelete.value = null
+    }
+
+    /**
      * Met à jour le commentaire d'une photo
      * @param comment Le nouveau commentaire
      */
@@ -516,6 +562,116 @@ class RoomViewModel @Inject constructor(
                     )
                     // Réinitialiser la photo en cours d'édition même en cas d'erreur
                     _photoToEdit.value = null
+                }
+            }
+        }
+    }
+
+    /**
+     * Ajoute un nouvel objet à la pièce
+     * @param name Nom de l'objet
+     * @param quantity Quantité de l'objet
+     * @param condition État de l'objet
+     * @param comment Commentaire supplémentaire (facultatif)
+     */
+    fun addItem(name: String, quantity: Int, condition: String, comment: String = "") {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+                
+                val item = Item(
+                    roomId = roomId,
+                    name = name,
+                    quantity = quantity,
+                    condition = condition,
+                    comment = comment
+                )
+                
+                itemRepository.insertItem(item)
+                
+                // Recharger les objets après l'ajout
+                val updatedItems = itemRepository.getItemsByRoomId(roomId).first()
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        items = updatedItems,
+                        isLoading = false
+                    )
+                }
+                
+                Log.d("RoomViewModel", "Item added successfully: $name")
+            } catch (e: Exception) {
+                Log.e("RoomViewModel", "Failed to add item", e)
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        error = "Échec de l'ajout de l'objet: ${e.message}",
+                        isLoading = false
+                    )
+                }
+            }
+        }
+    }
+    
+    /**
+     * Met à jour un objet existant
+     * @param item L'objet à mettre à jour
+     */
+    fun updateItem(item: Item) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+                
+                itemRepository.updateItem(item)
+                
+                // Recharger les objets après la mise à jour
+                val updatedItems = itemRepository.getItemsByRoomId(roomId).first()
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        items = updatedItems,
+                        isLoading = false
+                    )
+                }
+                
+                Log.d("RoomViewModel", "Item updated successfully: ${item.name}")
+            } catch (e: Exception) {
+                Log.e("RoomViewModel", "Failed to update item", e)
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        error = "Échec de la mise à jour de l'objet: ${e.message}",
+                        isLoading = false
+                    )
+                }
+            }
+        }
+    }
+    
+    /**
+     * Supprime un objet
+     * @param item L'objet à supprimer
+     */
+    fun deleteItem(item: Item) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+                
+                itemRepository.deleteItem(item)
+                
+                // Recharger les objets après la suppression
+                val updatedItems = itemRepository.getItemsByRoomId(roomId).first()
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        items = updatedItems,
+                        isLoading = false
+                    )
+                }
+                
+                Log.d("RoomViewModel", "Item deleted successfully: ${item.name}")
+            } catch (e: Exception) {
+                Log.e("RoomViewModel", "Failed to delete item", e)
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        error = "Échec de la suppression de l'objet: ${e.message}",
+                        isLoading = false
+                    )
                 }
             }
         }

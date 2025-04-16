@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -18,17 +19,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.etatdeslieux.model.DialogStates
 import com.example.etatdeslieux.model.Photo
 import com.example.etatdeslieux.model.Room
+import com.example.etatdeslieux.model.Item
 import com.example.etatdeslieux.ui.components.CameraPermission
-import com.example.etatdeslieux.ui.components.PhotoSection
+import com.example.etatdeslieux.ui.components.PhotoSectionSimple
 import com.example.etatdeslieux.utils.DateFormatter
 import kotlinx.coroutines.launch
 
@@ -88,6 +94,9 @@ fun RoomDetailScreen(
     // Observer pour la photo dont le commentaire est en cours d'édition
     val photoToEdit by viewModel.photoToEdit.collectAsState()
     
+    // Observer pour les objets
+    val items = uiState.items
+    
     // Afficher la boîte de dialogue de commentaire si une photo est en attente
     LaunchedEffect(pendingPhotoUri) {
         if (pendingPhotoUri != null) {
@@ -106,123 +115,232 @@ fun RoomDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(uiState.room?.name ?: "") },
+                title = { Text(uiState.room?.name ?: "Détails de la pièce") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Retour"
+                        )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { dialogStates = dialogStates.copy(showEditDialog = true) }) {
-                        Icon(Icons.Default.Edit, "Modifier")
-                    }
-                    IconButton(onClick = { dialogStates = dialogStates.copy(showDeleteDialog = true) }) {
-                        Icon(Icons.Default.Delete, "Supprimer")
+                    if (uiState.room != null) {
+                        IconButton(onClick = {
+                            dialogStates = dialogStates.copy(showEditDialog = true)
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Modifier"
+                            )
+                        }
+                        IconButton(onClick = {
+                            dialogStates = dialogStates.copy(showDeleteDialog = true)
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Supprimer"
+                            )
+                        }
+                        IconButton(onClick = {
+                            scope.launch {
+                                val pdfFile = viewModel.generatePdf()
+                                if (pdfFile != null) {
+                                    Toast.makeText(
+                                        context,
+                                        "PDF généré: ${pdfFile.name}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Erreur lors de la génération du PDF",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.PictureAsPdf,
+                                contentDescription = "Générer PDF"
+                            )
+                        }
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    dialogStates = dialogStates.copy(showCameraPermission = true)
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PhotoCamera,
+                    contentDescription = "Prendre une photo"
+                )
+            }
         }
-    ) { padding ->
+    ) { paddingValues ->
         if (uiState.isLoading) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(60.dp),
-                        strokeWidth = 6.dp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Chargement...",
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                CircularProgressIndicator()
+            }
+        } else if (uiState.room == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Pièce non trouvée")
             }
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                uiState.room?.let { room ->
-                    item {
-                        RoomInfoSection(room)
-                    }
-                    item {
-                        PhotoSection(
-                            photos = uiState.photos,
-                            onAddPhotoClick = {
-                                dialogStates = dialogStates.copy(showCameraPermission = true)
-                            },
-                            onDeletePhoto = { photo ->
-                                scope.launch {
-                                    viewModel.deletePhoto(photo)
-                                }
-                            },
-                            onDownloadPhoto = { photo ->
-                                scope.launch {
-                                    viewModel.downloadPhoto(photo)
-                                }
-                            },
-                            onEditComment = { photo ->
-                                viewModel.setPhotoToEdit(photo)
-                                dialogStates = dialogStates.copy(showEditCommentDialog = true)
-                            }
-                        )
-                    }
-                    
-                    // Bouton pour générer le PDF
-                    item {
-                        Card(
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                            Text(
+                                text = "Informations",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Divider()
+                            Spacer(modifier = Modifier.height(8.dp))
+                            RoomInfoSection(uiState.room!!)
+                        }
+                    }
+                }
+                
+                // Section des objets
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Générer un PDF de l'état des lieux",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(bottom = 8.dp)
+                                    text = "Objets",
+                                    style = MaterialTheme.typography.titleMedium
                                 )
-                                
-                                Button(
-                                    onClick = {
-                                        scope.launch {
-                                            val pdfFile = viewModel.generatePdf()
-                                            if (pdfFile != null) {
-                                                Toast.makeText(
-                                                    context,
-                                                    "PDF généré avec succès: ${pdfFile.name}",
-                                                    Toast.LENGTH_LONG
-                                                ).show()
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
+                                IconButton(onClick = {
+                                    dialogStates = dialogStates.copy(showAddItemDialog = true)
+                                }) {
                                     Icon(
-                                        imageVector = Icons.Filled.PictureAsPdf,
-                                        contentDescription = "Générer PDF",
-                                        modifier = Modifier.size(24.dp)
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Ajouter un objet"
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Générer PDF")
                                 }
+                            }
+                            Divider()
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            if (items.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Aucun objet \uD83D\uDE9E\nCliquez sur + pour ajouter",
+                                        textAlign = TextAlign.Center,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                ItemsSection(
+                                    items = items,
+                                    onEditItem = { item ->
+                                        viewModel.setItemToEdit(item)
+                                        dialogStates = dialogStates.copy(showEditItemDialog = true)
+                                    },
+                                    onDeleteItem = { item ->
+                                        viewModel.setItemToDelete(item)
+                                        dialogStates = dialogStates.copy(showDeleteItemDialog = true)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                // Section des photos
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Photos",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Divider()
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            if (uiState.photos.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Aucune photo \uD83D\uDCF7\nUtilisez le bouton en bas à droite pour prendre une photo",
+                                        textAlign = TextAlign.Center,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                PhotoSectionSimple(
+                                    photos = uiState.photos,
+                                    onPhotoClick = { photo ->
+                                        viewModel.setPhotoToEdit(photo)
+                                        dialogStates = dialogStates.copy(showEditCommentDialog = true)
+                                    },
+                                    onDeletePhoto = { photo ->
+                                        viewModel.deletePhoto(photo)
+                                    }
+                                )
                             }
                         }
                     }
@@ -290,6 +408,47 @@ fun RoomDetailScreen(
                     viewModel.updatePhotoComment(comment)
                     dialogStates = dialogStates.copy(showEditCommentDialog = false)
                 }
+            }
+        )
+    }
+    
+    // Dialogues pour les objets
+    if (dialogStates.showAddItemDialog) {
+        AddItemDialog(
+            onDismiss = { dialogStates = dialogStates.copy(showAddItemDialog = false) },
+            onConfirm = { name, quantity, condition, comment ->
+                dialogStates = dialogStates.copy(showAddItemDialog = false)
+                viewModel.addItem(name, quantity, condition, comment)
+            }
+        )
+    }
+    
+    val itemToEdit by viewModel.itemToEdit.collectAsState()
+    if (dialogStates.showEditItemDialog && itemToEdit != null) {
+        EditItemDialog(
+            item = itemToEdit!!,
+            onDismiss = { 
+                dialogStates = dialogStates.copy(showEditItemDialog = false)
+                viewModel.clearItemToEdit()
+            },
+            onConfirm = { updatedItem ->
+                dialogStates = dialogStates.copy(showEditItemDialog = false)
+                viewModel.updateItem(updatedItem)
+            }
+        )
+    }
+    
+    val itemToDelete by viewModel.itemToDelete.collectAsState()
+    if (dialogStates.showDeleteItemDialog && itemToDelete != null) {
+        DeleteItemDialog(
+            item = itemToDelete!!,
+            onDismiss = { 
+                dialogStates = dialogStates.copy(showDeleteItemDialog = false)
+                viewModel.clearItemToDelete()
+            },
+            onConfirm = {
+                dialogStates = dialogStates.copy(showDeleteItemDialog = false)
+                viewModel.deleteItem(itemToDelete!!)
             }
         )
     }
@@ -523,41 +682,381 @@ private fun InfoRow(
     }
 }
 
-private data class DialogStates(
-    val showDeleteDialog: Boolean = false,
-    val showEditDialog: Boolean = false,
-    val showCameraPermission: Boolean = false,
-    val showPhotoCommentDialog: Boolean = false,
-    val showEditCommentDialog: Boolean = false
-) : Parcelable {
-    constructor(parcel: Parcel) : this(
-        parcel.readByte() != 0.toByte(),
-        parcel.readByte() != 0.toByte(),
-        parcel.readByte() != 0.toByte(),
-        parcel.readByte() != 0.toByte(),
-        parcel.readByte() != 0.toByte()
+@Composable
+private fun ItemsSection(
+    items: List<Item>,
+    onEditItem: (Item) -> Unit,
+    onDeleteItem: (Item) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-    }
-
-    override fun writeToParcel(parcel: Parcel, flags: Int) {
-        parcel.writeByte(if (showDeleteDialog) 1 else 0)
-        parcel.writeByte(if (showEditDialog) 1 else 0)
-        parcel.writeByte(if (showCameraPermission) 1 else 0)
-        parcel.writeByte(if (showPhotoCommentDialog) 1 else 0)
-        parcel.writeByte(if (showEditCommentDialog) 1 else 0)
-    }
-
-    override fun describeContents(): Int {
-        return 0
-    }
-
-    companion object CREATOR : Parcelable.Creator<DialogStates> {
-        override fun createFromParcel(parcel: Parcel): DialogStates {
-            return DialogStates(parcel)
-        }
-
-        override fun newArray(size: Int): Array<DialogStates?> {
-            return arrayOfNulls(size)
+        items.forEach { item ->
+            ItemRow(
+                item = item,
+                onEditItem = onEditItem,
+                onDeleteItem = onDeleteItem
+            )
         }
     }
+}
+
+@Composable
+private fun ItemRow(
+    item: Item,
+    onEditItem: (Item) -> Unit,
+    onDeleteItem: (Item) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Quantité: ${item.quantity}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Spacer(modifier = Modifier.width(16.dp))
+                    
+                    // Badge pour l'état
+                    val (backgroundColor, textColor) = when(item.condition) {
+                        "Mauvais" -> Pair(Color(0xFFFFCDD2), Color(0xFFB71C1C))
+                        "Bon" -> Pair(Color(0xFFE1F5FE), Color(0xFF0277BD))
+                        "Très Bon" -> Pair(Color(0xFFE8F5E9), Color(0xFF2E7D32))
+                        "Neuf" -> Pair(Color(0xFFF3E5F5), Color(0xFF6A1B9A))
+                        else -> Pair(Color(0xFFEEEEEE), Color(0xFF424242))
+                    }
+                    
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = backgroundColor,
+                        modifier = Modifier.padding(4.dp)
+                    ) {
+                        Text(
+                            text = item.condition,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = textColor,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+                
+                if (item.comment.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = item.comment,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            
+            Row {
+                IconButton(onClick = { onEditItem(item) }) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Éditer l'objet",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(onClick = { onDeleteItem(item) }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Supprimer l'objet",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditItemDialog(
+    item: Item,
+    onDismiss: () -> Unit,
+    onConfirm: (Item) -> Unit
+) {
+    var name by remember { mutableStateOf(item.name) }
+    var quantity by remember { mutableStateOf(item.quantity.toString()) }
+    var condition by remember { mutableStateOf(item.condition) }
+    var comment by remember { mutableStateOf(item.comment) }
+    var expanded by remember { mutableStateOf(false) }
+    
+    val conditions = listOf("Mauvais", "Bon", "Très Bon", "Neuf")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Éditer l'objet") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nom") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = { 
+                        // Accepter uniquement les chiffres
+                        if (it.isEmpty() || it.all { char -> char.isDigit() }) {
+                            quantity = it
+                        }
+                    },
+                    label = { Text("Quantité") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                
+                // Menu déroulant pour l'état
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = condition,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("État") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+                    
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        conditions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    condition = option
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    label = { Text("Commentaire (optionnel)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 5
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (name.isNotBlank() && quantity.isNotBlank()) {
+                        onConfirm(
+                            item.copy(
+                                name = name,
+                                quantity = quantity.toIntOrNull() ?: 1,
+                                condition = condition,
+                                comment = comment
+                            )
+                        )
+                    }
+                },
+                enabled = name.isNotBlank() && quantity.isNotBlank()
+            ) {
+                Text("Enregistrer")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annuler")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddItemDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, Int, String, String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var quantity by remember { mutableStateOf("1") }
+    var condition by remember { mutableStateOf("Bon") }
+    var comment by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+    
+    val conditions = listOf("Mauvais", "Bon", "Très Bon", "Neuf")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ajouter un objet") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nom") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = { 
+                        // Accepter uniquement les chiffres
+                        if (it.isEmpty() || it.all { char -> char.isDigit() }) {
+                            quantity = it
+                        }
+                    },
+                    label = { Text("Quantité") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                
+                // Menu déroulant pour l'état
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = condition,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("État") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+                    
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        conditions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    condition = option
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    label = { Text("Commentaire (optionnel)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 5
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (name.isNotBlank() && quantity.isNotBlank()) {
+                        onConfirm(
+                            name,
+                            quantity.toIntOrNull() ?: 1,
+                            condition,
+                            comment
+                        )
+                    }
+                },
+                enabled = name.isNotBlank() && quantity.isNotBlank()
+            ) {
+                Text("Enregistrer")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annuler")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DeleteItemDialog(
+    item: Item,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Supprimer l'objet") },
+        text = { Text("Êtes-vous sûr de vouloir supprimer l'objet '${item.name}' ?") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Supprimer")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annuler")
+            }
+        }
+    )
 }

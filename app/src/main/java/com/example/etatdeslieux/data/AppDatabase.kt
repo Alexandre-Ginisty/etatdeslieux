@@ -7,16 +7,18 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.etatdeslieux.data.converter.DateTimeConverter
 import com.example.etatdeslieux.data.converter.SetConverter
+import com.example.etatdeslieux.data.dao.ItemDao
 import com.example.etatdeslieux.data.dao.PhotoDao
 import com.example.etatdeslieux.data.dao.RoomDao
 import com.example.etatdeslieux.data.dao.RoomGroupDao
+import com.example.etatdeslieux.model.Item
 import com.example.etatdeslieux.model.Photo
 import com.example.etatdeslieux.model.Room as ModelRoom
 import com.example.etatdeslieux.model.RoomGroup
 
 @Database(
-    entities = [ModelRoom::class, Photo::class, RoomGroup::class],
-    version = 2,
+    entities = [ModelRoom::class, Photo::class, RoomGroup::class, Item::class],
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(DateTimeConverter::class, SetConverter::class)
@@ -24,6 +26,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun roomDao(): RoomDao
     abstract fun photoDao(): PhotoDao
     abstract fun roomGroupDao(): RoomGroupDao
+    abstract fun itemDao(): ItemDao
 
     companion object {
         @Volatile
@@ -35,7 +38,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "app_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration() // Permet de réinitialiser la base de données lors des migrations
+                .build()
                 INSTANCE = instance
                 instance
             }
