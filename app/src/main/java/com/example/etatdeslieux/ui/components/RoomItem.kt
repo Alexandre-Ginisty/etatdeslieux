@@ -8,6 +8,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
@@ -35,19 +36,21 @@ fun RoomItem(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
-            .padding(8.dp)
+            .padding(vertical = 2.dp, horizontal = 8.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
-                .padding(16.dp)
                 .fillMaxWidth()
+                .padding(8.dp)
                 .let {
                     if (isHighlighted) {
                         it.background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
                     } else {
                         it
                     }
-                }
+                },
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             // Titre avec mise en évidence de la recherche
             val titleText = if (searchQuery.isNotBlank() && room.name.contains(searchQuery, ignoreCase = true)) {
@@ -58,50 +61,19 @@ fun RoomItem(
             
             Text(
                 text = titleText,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            // Description avec mise en évidence de la recherche
-            val descriptionText = if (searchQuery.isNotBlank() && room.description.contains(searchQuery, ignoreCase = true)) {
-                highlightText(room.description, searchQuery)
-            } else {
-                AnnotatedString(room.description)
-            }
-            
-            Text(
-                text = descriptionText,
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Étage: ${room.floor}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    text = "Type: ${room.etatType}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Par: ${room.creator}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
+            // Type d'état des lieux (entrée/sortie)
+            Text(
+                text = room.etatType,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

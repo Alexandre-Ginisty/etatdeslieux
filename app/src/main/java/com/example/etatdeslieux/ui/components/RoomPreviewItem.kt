@@ -15,7 +15,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.etatdeslieux.model.Room
 import com.example.etatdeslieux.model.RoomGroup
-import com.example.etatdeslieux.utils.DateFormatter
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -33,7 +32,7 @@ fun RoomPreviewItem(
     OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
+            .padding(vertical = 2.dp)  
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = { showMenu = true }
@@ -45,34 +44,32 @@ fun RoomPreviewItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(8.dp),  
+            horizontalArrangement = Arrangement.spacedBy(8.dp),  
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Default.Home,
                 contentDescription = "État des lieux",
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(20.dp),  
                 tint = MaterialTheme.colorScheme.primary
             )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = room.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = room.etatType,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            
+            // Nom de la pièce
+            Text(
+                text = room.name,
+                style = MaterialTheme.typography.bodyMedium,  
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            
+            // Type d'état des lieux (entrée/sortie)
+            Text(
+                text = room.etatType,
+                style = MaterialTheme.typography.bodySmall,  
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         DropdownMenu(

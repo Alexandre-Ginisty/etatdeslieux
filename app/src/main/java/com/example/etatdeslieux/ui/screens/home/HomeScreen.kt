@@ -5,6 +5,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +31,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.etatdeslieux.R
@@ -143,6 +147,13 @@ fun HomeScreen(
                     .padding(16.dp),
                 state = listState
             ) {
+                // Afficher un message d'accueil si la liste est vide
+                if (uiState.rooms.isEmpty() && uiState.roomGroups.isEmpty() && !uiState.isLoading) {
+                    item {
+                        EmptyStateMessage()
+                    }
+                }
+                
                 // Afficher les pièces non groupées
                 val ungroupedRooms = uiState.rooms.filter { currentRoom ->
                     uiState.roomGroups.none { group -> currentRoom.id in group.roomIds }
@@ -162,14 +173,23 @@ fun HomeScreen(
                                                    uiState.currentSearchIndex >= 0 && 
                                                    uiState.searchResults.getOrNull(uiState.currentSearchIndex) == room
                         
-                        RoomItem(
+                        RoomPreviewItem(
                             room = room,
                             onClick = { onNavigateToRoom(room.id) },
-                            onLongClick = {
-                                // Ouvrir le menu contextuel pour la pièce
+                            onDelete = { viewModel.deleteRoom(room) },
+                            onAddToGroup = { roomToMove ->
+                                val availableGroups = uiState.roomGroups.filter { targetGroup ->
+                                    !targetGroup.roomIds.contains(roomToMove.id)
+                                }
+                                if (availableGroups.isNotEmpty()) {
+                                    availableGroups.firstOrNull()?.let { targetGroup ->
+                                        viewModel.addRoomToGroup(roomToMove.id, targetGroup.id)
+                                    }
+                                }
                             },
-                            isHighlighted = isCurrentSearchResult,
-                            searchQuery = uiState.searchQuery
+                            availableGroups = uiState.roomGroups.filter { targetGroup ->
+                                !targetGroup.roomIds.contains(room.id)
+                            }
                         )
                     }
                 }
@@ -639,5 +659,60 @@ fun HomeScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun EmptyStateMessage() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Emoji comme illustration
+        Text(
+            text = "\uD83C\uDFE0", // Emoji maison
+            style = MaterialTheme.typography.displayLarge,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        
+        Text(
+            text = "Bienvenue dans votre application d'état des lieux !",
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        
+        Text(
+            text = "Commencez par créer votre premier état des lieux en appuyant sur le bouton + en bas à droite.",
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+        
+        // Flèche animée pointant vers le bouton d'ajout
+        val infiniteTransition = rememberInfiniteTransition(label = "Arrow animation")
+        val offsetY by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 20f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000, easing = EaseInOut),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "Arrow bounce"
+        )
+        
+        Icon(
+            imageVector = Icons.Default.ArrowDownward,
+            contentDescription = "Flèche vers le bas",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .size(48.dp)
+                .offset(y = offsetY.dp)
+        )
     }
 }
