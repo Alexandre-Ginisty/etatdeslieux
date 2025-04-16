@@ -11,10 +11,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.*
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.etatdeslieux.model.Room
 import com.example.etatdeslieux.model.RoomGroup
+import com.example.etatdeslieux.ui.components.highlightText
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -24,7 +26,9 @@ fun RoomPreviewItem(
     onDelete: () -> Unit,
     onAddToGroup: ((Room) -> Unit)? = null,
     availableGroups: List<RoomGroup> = emptyList(),
-    isInGroup: Boolean = false
+    isInGroup: Boolean = false,
+    isHighlighted: Boolean = false,
+    searchQuery: String = ""
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showGroupSelectionDialog by remember { mutableStateOf(false) }
@@ -38,7 +42,8 @@ fun RoomPreviewItem(
                 onLongClick = { showMenu = true }
             ),
         colors = CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
+                            else MaterialTheme.colorScheme.surface
         )
     ) {
         Row(
@@ -55,9 +60,15 @@ fun RoomPreviewItem(
                 tint = MaterialTheme.colorScheme.primary
             )
             
-            // Nom de la pièce
+            // Nom de la pièce avec mise en évidence de la recherche
+            val titleText = if (searchQuery.isNotBlank() && room.name.contains(searchQuery, ignoreCase = true)) {
+                highlightText(room.name, searchQuery)
+            } else {
+                AnnotatedString(room.name)
+            }
+            
             Text(
-                text = room.name,
+                text = titleText,
                 style = MaterialTheme.typography.bodyMedium,  
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

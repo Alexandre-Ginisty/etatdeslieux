@@ -282,8 +282,13 @@ class HomeViewModel @Inject constructor(
         
         // Filtrer les pièces qui correspondent à la requête
         val results = _rooms.value.filter { room ->
+            // Recherche dans le nom et la description de la pièce
             room.name.contains(query, ignoreCase = true) || 
-            (room.description.isNotBlank() && room.description.contains(query, ignoreCase = true))
+            (room.description.isNotBlank() && room.description.contains(query, ignoreCase = true)) ||
+            // Recherche dans les groupes auxquels appartient la pièce
+            _roomGroups.value.any { group -> 
+                group.roomIds.contains(room.id) && group.name.contains(query, ignoreCase = true)
+            }
         }
         
         _searchResults.value = results

@@ -112,13 +112,7 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showSearchDialog = !showSearchDialog }) {
-                        Icon(
-                            imageVector = if (showSearchDialog) Icons.Default.Close else Icons.Default.Search,
-                            contentDescription = if (showSearchDialog) "Fermer la recherche" else "Rechercher",
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+
                     Image(
                         painter = painterResource(id = R.mipmap.ic_launcher_adaptive_fore),
                         contentDescription = "Logo de l'application",
@@ -141,20 +135,14 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // Liste des pièces et des groupes
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp),
                 state = listState
             ) {
-                // Afficher un message d'accueil si la liste est vide
-                if (uiState.rooms.isEmpty() && uiState.roomGroups.isEmpty() && !uiState.isLoading) {
-                    item {
-                        EmptyStateMessage()
-                    }
-                }
-                
-                // Afficher les pièces non groupées
+                // Section des pièces non groupées
                 val ungroupedRooms = uiState.rooms.filter { currentRoom ->
                     uiState.roomGroups.none { group -> currentRoom.id in group.roomIds }
                 }
@@ -162,7 +150,7 @@ fun HomeScreen(
                 if (ungroupedRooms.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Pièces",
+                            text = "Pièces non groupées",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
@@ -187,34 +175,71 @@ fun HomeScreen(
                                     }
                                 }
                             },
-                            availableGroups = uiState.roomGroups.filter { targetGroup ->
-                                !targetGroup.roomIds.contains(room.id)
-                            }
+                            availableGroups = uiState.roomGroups.filter { !it.roomIds.contains(room.id) },
+                            isHighlighted = isCurrentSearchResult,
+                            searchQuery = uiState.searchQuery
                         )
+                    }
+                    
+                    // Séparateur entre les sections
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Divider()
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
 
-                // Afficher les groupes de pièces
-                items(uiState.roomGroups) { group ->
-                    val roomsInGroup = uiState.rooms.filter { room -> room.id in group.roomIds }
+                // Section des groupes
+                if (uiState.roomGroups.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Groupes",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
                     
-                    RoomGroupItem(
-                        group = group,
-                        rooms = roomsInGroup,
-                        onRoomClick = { room -> onNavigateToRoom(room.id) },
-                        onGroupClick = { viewModel.toggleGroupExpanded(group.id) },
-                        onRoomDelete = { room -> viewModel.deleteRoom(room) },
-                        onGroupDelete = { selectedGroup, deleteRooms ->
-                            viewModel.deleteGroup(selectedGroup, deleteRooms)
-                        },
-                        onRemoveRoomFromGroup = { groupId, roomId ->
-                            viewModel.removeRoomFromGroup(roomId, groupId)
-                        },
-                        searchQuery = uiState.searchQuery,
-                        currentSearchRoom = viewModel.getCurrentSearchRoom()
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
+                    // Afficher les groupes de pièces
+                    items(uiState.roomGroups) { group ->
+                        val roomsInGroup = uiState.rooms.filter { room -> room.id in group.roomIds }
+                        val isGroupHighlighted = uiState.searchQuery.isNotBlank() && 
+                                                group.name.contains(uiState.searchQuery, ignoreCase = true)
+                        
+                        // Wrapper pour mettre en surbrillance le groupe entier si son nom correspond à la recherche
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .let {
+                                    if (isGroupHighlighted) {
+                                        it.background(
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                    } else {
+                                        it
+                                    }
+                                }
+                        ) {
+                            RoomGroupItem(
+                                group = group,
+                                rooms = roomsInGroup,
+                                onRoomClick = { room -> onNavigateToRoom(room.id) },
+                                onGroupClick = { viewModel.toggleGroupExpanded(group.id) },
+                                onRoomDelete = { room -> viewModel.deleteRoom(room) },
+                                onGroupDelete = { selectedGroup, deleteRooms ->
+                                    viewModel.deleteGroup(selectedGroup, deleteRooms)
+                                },
+                                onRemoveRoomFromGroup = { groupId, roomId ->
+                                    viewModel.removeRoomFromGroup(roomId, groupId)
+                                },
+                                searchQuery = uiState.searchQuery,
+                                currentSearchRoom = viewModel.getCurrentSearchRoom()
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
             }
 
@@ -529,128 +554,163 @@ fun HomeScreen(
             }
 
             if (showSearchDialog) {
-                Surface(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 3.dp,
-                    shadowElevation = 3.dp,
-                    shape = RoundedCornerShape(8.dp)
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.BottomCenter
                 ) {
-                    Column(
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp)
+                            .padding(horizontal = 16.dp, vertical = 72.dp), // Marge en bas pour être au-dessus des boutons
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f), // Fond semi-transparent
+                        tonalElevation = 3.dp,
+                        shadowElevation = 3.dp,
+                        shape = RoundedCornerShape(16.dp) // Coins plus arrondis pour un look flottant
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            OutlinedTextField(
-                                value = searchQuery,
-                                onValueChange = { 
-                                    viewModel.updateSearchQuery(it)
-                                    // Recherche automatique lorsque l'utilisateur tape
-                                    if (it.length > 2) {
-                                        viewModel.searchRooms()
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                placeholder = { Text("Rechercher...") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                keyboardActions = KeyboardActions(onSearch = { viewModel.searchRooms() }),
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = "Rechercher",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                },
-                                trailingIcon = {
-                                    if (searchQuery.isNotEmpty()) {
-                                        IconButton(onClick = { 
-                                            viewModel.clearSearch()
-                                            showSearchDialog = false
-                                        }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Clear,
-                                                contentDescription = "Effacer",
-                                                tint = MaterialTheme.colorScheme.error
-                                            )
-                                        }
-                                    }
-                                },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                    cursorColor = MaterialTheme.colorScheme.primary
-                                )
-                            )
-                        }
-                        
-                        AnimatedVisibility(
-                            visible = totalSearchResults > 0,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
                         ) {
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = searchQuery,
+                                    onValueChange = { 
+                                        viewModel.updateSearchQuery(it)
+                                        // Recherche automatique lorsque l'utilisateur tape
+                                        if (it.length > 2) {
+                                            viewModel.searchRooms()
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    placeholder = { Text("Rechercher...") },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                    keyboardActions = KeyboardActions(onSearch = { viewModel.searchRooms() }),
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Search,
+                                            contentDescription = "Rechercher",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        if (searchQuery.isNotEmpty()) {
+                                            IconButton(onClick = { 
+                                                viewModel.clearSearch()
+                                                showSearchDialog = false
+                                            }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Clear,
+                                                    contentDescription = "Effacer",
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        }
+                                    },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                        cursorColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+                            
+                            // Bouton de recherche explicite
+                            Button(
+                                onClick = { viewModel.searchRooms() },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Text("Rechercher")
+                            }
+                            
+                            // Afficher le nombre de résultats même s'il est à zéro
+                            if (searchQuery.isNotBlank()) {
+                                Text(
+                                    text = if (totalSearchResults > 0) 
+                                        "$totalSearchResults résultat${if (totalSearchResults > 1) "s" else ""} trouvé${if (totalSearchResults > 1) "s" else ""}"
+                                    else 
+                                        "Aucun résultat trouvé",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (totalSearchResults > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                            }
+                            
+                            // Bouton Annuler
+                            TextButton(
+                                onClick = { 
+                                    viewModel.clearSearch()
+                                    showSearchDialog = false 
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp)
                             ) {
                                 Text(
-                                    text = "$totalSearchResults résultat${if (totalSearchResults > 1) "s" else ""} trouvé${if (totalSearchResults > 1) "s" else ""}",
+                                    text = "Annuler",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.error
                                 )
-                                
+                            }
+                            
+                            // Navigation entre les résultats (visible uniquement s'il y a des résultats)
+                            if (totalSearchResults > 0) {
                                 Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    if (totalSearchResults > 0) {
-                                        Text(
-                                            text = "${currentSearchIndex + 1} / $totalSearchResults",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(end = 8.dp)
-                                        )
-                                    }
+                                    Text(
+                                        text = "${currentSearchIndex + 1} / $totalSearchResults",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    )
                                     
-                                    FilledIconButton(
-                                        onClick = viewModel::previousSearchResult,
-                                        enabled = totalSearchResults > 1,
-                                        colors = IconButtonDefaults.filledIconButtonColors(
-                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                        )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.KeyboardArrowUp,
-                                            contentDescription = "Précédent"
-                                        )
-                                    }
-                                    
-                                    FilledIconButton(
-                                        onClick = viewModel::nextSearchResult,
-                                        enabled = totalSearchResults > 1,
-                                        colors = IconButtonDefaults.filledIconButtonColors(
-                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                        )
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.KeyboardArrowDown,
-                                            contentDescription = "Suivant"
-                                        )
+                                        FilledIconButton(
+                                            onClick = viewModel::previousSearchResult,
+                                            enabled = totalSearchResults > 1,
+                                            colors = IconButtonDefaults.filledIconButtonColors(
+                                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                            )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.KeyboardArrowUp,
+                                                contentDescription = "Précédent"
+                                            )
+                                        }
+                                        
+                                        FilledIconButton(
+                                            onClick = viewModel::nextSearchResult,
+                                            enabled = totalSearchResults > 1,
+                                            colors = IconButtonDefaults.filledIconButtonColors(
+                                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                            )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.KeyboardArrowDown,
+                                                contentDescription = "Suivant"
+                                            )
+                                        }
                                     }
                                 }
                             }
